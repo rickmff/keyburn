@@ -30,7 +30,7 @@ const accuracy = computed(() => {
 
 const generateWords = () => {
   const wordList = ['the', 'be', 'to', 'of', 'and', 'a', 'in', 'that', 'have', 'I', 'it', 'for', 'not', 'on', 'with', 'he', 'as', 'you', 'do', 'at'];
-  words.value = Array.from({ length: 200 }, () => wordList[Math.floor(Math.random() * wordList.length)]);
+  words.value = (Array as any).from({ length: 200 }, () => wordList[Math.floor(Math.random() * wordList.length)]);
 };
 
 const startTest = () => {
@@ -108,7 +108,7 @@ onMounted(() => {
   updateVisibleWords();
 });
 
-const wordStatus = computed(() => (word: string, index: number) => {
+const wordStatus = computed(() => (word: string, index: number): 'correct' | 'incorrect' | 'current' | 'upcoming' => {
   const globalIndex = index + Math.max(0, currentWordIndex.value - wordsPerLine.value);
   if (globalIndex < currentWordIndex.value) {
     return typedWords.value[globalIndex] === word ? 'correct' : 'incorrect';
@@ -119,12 +119,8 @@ const wordStatus = computed(() => (word: string, index: number) => {
   return 'upcoming';
 });
 
-const currentTypedWord = computed(() => input.value.trim());
-
-// Add a new ref for the theme
 const isDarkMode = ref(true);
 
-// Add a computed property for theme classes
 const themeClasses = computed(() => ({
   'bg-gray-900 text-gray-300': isDarkMode.value,
   'bg-gray-100 text-gray-800': !isDarkMode.value,

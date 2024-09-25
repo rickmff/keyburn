@@ -1,11 +1,18 @@
+import { fileURLToPath, URL } from 'node:url'
+
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
-import { fileURLToPath, URL } from 'node:url'
-import tailwindcss from 'tailwindcss'
+import vueDevTools from 'vite-plugin-vue-devtools'
+
+import tailwind from 'tailwindcss'
 import autoprefixer from 'autoprefixer'
 
+// https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [vue()],
+  build: {
+    outDir: fileURLToPath(new URL('./dist', import.meta.url))
+  },
+  plugins: [vue(), vueDevTools()],
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url))
@@ -13,10 +20,7 @@ export default defineConfig({
   },
   css: {
     postcss: {
-      plugins: [
-        tailwindcss,
-        autoprefixer,
-      ],
-    },
-  },
+      plugins: [tailwind(), autoprefixer()]
+    }
+  }
 })
