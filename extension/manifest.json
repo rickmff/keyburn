@@ -1,13 +1,15 @@
 {
     "manifest_version": 3,
-    "name": "Text to Typing Game",
-    "version": "1.3",
-    "description": "Transform any text into a typing speed minigame",
+    "name": "Typing Game",
+    "version": "1.0",
     "permissions": [
         "activeTab",
-        "storage",
-        "scripting"
+        "scripting",
+        "storage"
     ],
+    "background": {
+        "service_worker": "background.js"
+    },
     "action": {
         "default_popup": "popup.html"
     },

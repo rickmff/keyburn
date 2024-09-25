@@ -1,0 +1,15 @@
+/* Existing styles remain unchanged */
+
+#typing-area {
+    margin-top: 10px;
+}
+
+#user-input {
+    width: 100%;
+    margin-top: 5px;
+}
+
+#results {
+    margin-top: 10px;
+    font-size: 14px;
+}
