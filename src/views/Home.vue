@@ -33,16 +33,27 @@ onMounted(() => {
   updateVisibleWords()
 })
 
-const wordStatus = computed(() => (word: string, index: number): "correct" | "incorrect" | "current" | "upcoming" => {
-  const globalIndex = index + Math.max(0, testState.value.currentWordIndex - WORDS_PER_LINE)
-  if (globalIndex < testState.value.currentWordIndex) {
-    return testState.value.typedWords[globalIndex] === word ? "correct" : "incorrect"
-  }
-  if (globalIndex === testState.value.currentWordIndex) {
-    return "current"
-  }
-  return "upcoming"
-})
+const charStatus = computed(
+  () =>
+    (wordIndex: number, charIndex: number): "correct" | "incorrect" | "current" | "upcoming" => {
+      const globalIndex = wordIndex + Math.max(0, testState.value.currentWordIndex - WORDS_PER_LINE)
+
+      if (globalIndex < testState.value.currentWordIndex) {
+        return "correct" // Assume all characters in previous words are correct
+      }
+
+      if (globalIndex === testState.value.currentWordIndex) {
+        if (charIndex < testState.value.currentCharIndex) {
+          return testState.value.typedCharacters[charIndex] ? "correct" : "incorrect"
+        }
+        if (charIndex === testState.value.currentCharIndex) {
+          return "current"
+        }
+      }
+
+      return "upcoming"
+    }
+)
 
 const showResults = ref(false)
 
@@ -59,6 +70,26 @@ watch(
     }
   }
 )
+
+const restartTest = () => {
+  showResults.value = false
+  startTest()
+  updateVisibleWords()
+}
+
+const handleKeyPress = (event: KeyboardEvent) => {
+  if (!testState.value.isTestActive) return
+  event.preventDefault()
+  handleInput(event.key)
+}
+
+// Add this computed property to determine the position of the cursor
+const cursorPosition = computed(() => {
+  return {
+    wordIndex: testState.value.currentWordIndex - Math.max(0, testState.value.currentWordIndex - WORDS_PER_LINE),
+    charIndex: testState.value.currentCharIndex
+  }
+})
 </script>
 
 <template>
@@ -73,31 +104,35 @@ watch(
       </header>
 
       <div class="mt-32">
-        <div class="mb-8 text-center text-2xl leading-relaxed">
+        <div class="mb-8 text-center text-2xl leading-relaxed relative">
           <p class="flex flex-wrap justify-center gap-x-2">
-            <span
-              v-for="(word, index) in visibleWords"
-              :key="index"
-              :class="{
-                'text-green-500': wordStatus(word, index) === 'correct',
-                'text-red-500': wordStatus(word, index) === 'incorrect',
-                'text-yellow-500 underline underline-offset-8': wordStatus(word, index) === 'current',
-                'text-gray-600': wordStatus(word, index) === 'upcoming'
-              }"
-            >
-              {{ word }}
+            <span v-for="(word, wordIndex) in visibleWords" :key="wordIndex" class="relative">
+              <span v-for="(char, charIndex) in word" :key="charIndex" class="relative">
+                <span
+                  v-if="wordIndex === cursorPosition.wordIndex && charIndex === cursorPosition.charIndex"
+                  class="absolute -left-[3px] top-0 w-[1.75px] h-6 bg-yellow-500 animate-blink"
+                />
+                <span
+                  :class="{
+                    'text-green-500': charStatus(wordIndex, charIndex) === 'correct',
+                    'text-red-500': charStatus(wordIndex, charIndex) === 'incorrect',
+                    'text-yellow-500': charStatus(wordIndex, charIndex) === 'current',
+                    'text-gray-600': charStatus(wordIndex, charIndex) === 'upcoming'
+                  }"
+                >
+                  {{ char }}
+                </span>
+              </span>
+              {{ wordIndex < visibleWords.length - 1 ? " " : "" }}
             </span>
           </p>
         </div>
 
-        <input
-          v-model="testState.input"
-          @input="handleInput"
-          type="text"
-          class="w-full p-2 bg-transparent border-b border-gray-600 focus:outline-none focus:border-yellow-500 mb-8"
-          :disabled="!testState.isTestActive && testState.timeLeft === 0"
-          placeholder="Start typing..."
-          aria-label="Type the words here"
+        <div
+          class="w-full p-2 bg-transparent border-b border-gray-600 focus:outline-none focus:border-yellow-500 mb-8 h-10"
+          tabindex="0"
+          @keydown="handleKeyPress"
+          :class="{ 'cursor-not-allowed': !testState.isTestActive }"
         />
 
         <div v-if="!showResults" class="flex justify-between items-center">
@@ -107,7 +142,10 @@ watch(
           </div>
           <div class="flex items-center space-x-4">
             <p class="text-xl">{{ testState.timeLeft }}s</p>
-            <button @click="startTest" class="bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-2 px-4 rounded">
+            <button
+              @click="restartTest"
+              class="bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-2 px-4 rounded"
+            >
               Restart
             </button>
           </div>
@@ -118,10 +156,16 @@ watch(
         v-if="showResults"
         :wpm="wpm"
         :accuracy="accuracy"
-        :correct-words="testState.correctWords"
-        :incorrect-words="testState.incorrectWords"
+        :correct-chars="testState.correctChars"
+        :incorrect-chars="testState.incorrectChars"
         :total-characters-typed="testState.totalCharactersTyped"
       />
+
+      <div v-if="showResults" class="mt-8 text-center">
+        <button @click="restartTest" class="bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-2 px-4 rounded">
+          Restart Test
+        </button>
+      </div>
     </div>
   </main>
 </template>
@@ -129,5 +173,20 @@ watch(
 <style>
 body {
   font-family: "Roboto Mono", monospace;
+  letter-spacing: 0.075em;
+}
+
+@keyframes blink {
+  0%,
+  100% {
+    opacity: 0.75;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.animate-blink {
+  animation: blink 1s infinite;
 }
 </style>

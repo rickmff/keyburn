@@ -8,8 +8,8 @@ Chart.register(...registerables)
 interface Props {
   wpm: number
   accuracy: number
-  correctWords: number
-  incorrectWords: number
+  correctChars: number
+  incorrectChars: number
   totalCharactersTyped: number
 }
 
@@ -18,7 +18,6 @@ const props = defineProps<Props>()
 const chartRef = ref<HTMLCanvasElement | null>(null)
 const { isDarkMode } = useTheme()
 
-const totalWords = computed(() => props.correctWords + props.incorrectWords)
 const charactersPerMinute = computed(() => props.totalCharactersTyped * 2)
 
 onMounted(() => {
@@ -26,10 +25,10 @@ onMounted(() => {
     new Chart(chartRef.value, {
       type: "doughnut",
       data: {
-        labels: ["Correct Words", "Incorrect Words"],
+        labels: ["Correct Characters", "Incorrect Characters"],
         datasets: [
           {
-            data: [props.correctWords, props.incorrectWords],
+            data: [props.correctChars, props.incorrectChars],
             backgroundColor: ["#10B981", "#EF4444"]
           }
         ]
@@ -45,7 +44,6 @@ onMounted(() => {
           },
           title: {
             display: true,
-            text: "Word Accuracy",
             color: isDarkMode.value ? "#D1D5DB" : "#4B5563"
           }
         }
@@ -82,9 +80,11 @@ onMounted(() => {
           </p>
         </div>
         <div :class="['p-4 rounded', isDarkMode ? 'bg-gray-700' : 'bg-gray-100']">
-          <h3 :class="['text-lg font-semibold', isDarkMode ? 'text-yellow-500' : 'text-yellow-600']">Total Words</h3>
+          <h3 :class="['text-lg font-semibold', isDarkMode ? 'text-yellow-500' : 'text-yellow-600']">
+            Total Characters
+          </h3>
           <p :class="['text-3xl font-bold', isDarkMode ? 'text-white' : 'text-gray-900']">
-            {{ totalWords }}
+            {{ totalCharactersTyped }}
           </p>
         </div>
       </div>

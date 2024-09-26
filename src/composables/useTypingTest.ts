@@ -3,30 +3,32 @@ import { ref, computed, Ref } from "vue"
 interface TestState {
   words: string[]
   currentWordIndex: number
+  currentCharIndex: number
   input: string
   startTime: number | null
   endTime: number | null
-  correctWords: number
-  incorrectWords: number
+  correctChars: number
+  incorrectChars: number
   timeLeft: number
   isTestActive: boolean
   totalCharactersTyped: number
-  typedWords: string[]
+  typedCharacters: boolean[]
 }
 
 export function useTypingTest(wordList: string[], wordsToGenerate: number, testDuration: number) {
   const testState: Ref<TestState> = ref({
     words: [],
     currentWordIndex: 0,
+    currentCharIndex: 0,
     input: "",
     startTime: null,
     endTime: null,
-    correctWords: 0,
-    incorrectWords: 0,
+    correctChars: 0,
+    incorrectChars: 0,
     timeLeft: testDuration,
     isTestActive: false,
     totalCharactersTyped: 0,
-    typedWords: []
+    typedCharacters: []
   })
 
   const currentWord = computed(() => testState.value.words[testState.value.currentWordIndex] || "")
@@ -34,66 +36,91 @@ export function useTypingTest(wordList: string[], wordsToGenerate: number, testD
   const wpm = computed(() => {
     if (!testState.value.startTime || !testState.value.endTime) return 0
     const timeInMinutes = (testState.value.endTime - testState.value.startTime) / 60000
-    return Math.round((testState.value.correctWords + testState.value.incorrectWords) / timeInMinutes)
+    return Math.round(testState.value.correctChars / 5 / timeInMinutes)
   })
 
   const accuracy = computed(() => {
-    const totalWords = testState.value.correctWords + testState.value.incorrectWords
-    return totalWords > 0 ? Math.round((testState.value.correctWords / totalWords) * 100) : 0
+    const totalChars = testState.value.correctChars + testState.value.incorrectChars
+    return totalChars > 0 ? Math.round((testState.value.correctChars / totalChars) * 100) : 0
   })
+
+  let inactivityTimer: number | null = null
+  let gameTimer: number | null = null
 
   function startTest() {
     testState.value.words = wordList
     testState.value.currentWordIndex = 0
+    testState.value.currentCharIndex = 0
     testState.value.input = ""
-    testState.value.startTime = Date.now()
+    testState.value.startTime = null
     testState.value.endTime = null
-    testState.value.correctWords = 0
-    testState.value.incorrectWords = 0
+    testState.value.correctChars = 0
+    testState.value.incorrectChars = 0
     testState.value.timeLeft = testDuration
     testState.value.isTestActive = true
     testState.value.totalCharactersTyped = 0
-    testState.value.typedWords = []
+    testState.value.typedCharacters = []
+  }
 
-    const timer = setInterval(() => {
+  function handleInput(char: string) {
+    if (!testState.value.isTestActive) return
+
+    if (!testState.value.startTime) {
+      testState.value.startTime = Date.now()
+      startGameTimer()
+    }
+
+    resetInactivityTimer()
+
+    if (char === " ") {
+      // Move to the next word only if space is pressed
+      if (testState.value.currentCharIndex > 0) {
+        testState.value.currentWordIndex++
+        testState.value.currentCharIndex = 0
+        testState.value.input = ""
+        testState.value.typedCharacters = []
+
+        if (testState.value.currentWordIndex >= testState.value.words.length) {
+          endTest()
+        }
+      }
+    } else {
+      const expectedChar = currentWord.value[testState.value.currentCharIndex]
+      const isCorrect = char === expectedChar
+
+      if (isCorrect) {
+        testState.value.correctChars++
+      } else {
+        testState.value.incorrectChars++
+      }
+
+      testState.value.typedCharacters.push(isCorrect)
+      testState.value.totalCharactersTyped++
+      testState.value.currentCharIndex++
+      testState.value.input += char
+    }
+  }
+
+  function startGameTimer() {
+    gameTimer = window.setInterval(() => {
       if (testState.value.timeLeft > 0) {
         testState.value.timeLeft--
       } else {
-        clearInterval(timer)
         endTest()
       }
     }, 1000)
   }
 
-  function handleInput(event: Event) {
-    if (!testState.value.isTestActive) return
-
-    const input = (event.target as HTMLInputElement).value
-    testState.value.input = input
-
-    if (input.endsWith(" ")) {
-      const typedWord = input.trim()
-      testState.value.typedWords.push(typedWord)
-      testState.value.totalCharactersTyped += typedWord.length
-
-      if (typedWord === currentWord.value) {
-        testState.value.correctWords++
-      } else {
-        testState.value.incorrectWords++
-      }
-
-      testState.value.currentWordIndex++
-      testState.value.input = ""
-
-      if (testState.value.currentWordIndex >= testState.value.words.length) {
-        endTest()
-      }
-    }
+  function resetInactivityTimer() {
+    if (inactivityTimer) clearTimeout(inactivityTimer)
+    inactivityTimer = setTimeout(endTest, 3000) as unknown as number
   }
 
   function endTest() {
     testState.value.isTestActive = false
     testState.value.endTime = Date.now()
+    if (inactivityTimer) clearTimeout(inactivityTimer)
+    if (gameTimer) clearInterval(gameTimer)
   }
 
   return {
