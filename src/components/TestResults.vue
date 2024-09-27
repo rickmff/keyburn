@@ -68,7 +68,7 @@ onMounted(() => {
           </p>
         </div>
         <div :class="['p-4 rounded', isDarkMode ? 'bg-gray-700' : 'bg-gray-100']">
-          <h3 :class="['text-lg font-semibold', isDarkMode ? 'text-yellow-500' : 'text-yellow-600']">Accuracy</h3>
+          <h3 :class="['text-lg font-semibold', isDarkMode ? 'text-yellow-500' : 'text-yellow-600']">Word Accuracy</h3>
           <p :class="['text-3xl font-bold', isDarkMode ? 'text-white' : 'text-gray-900']">{{ accuracy }}%</p>
         </div>
         <div :class="['p-4 rounded', isDarkMode ? 'bg-gray-700' : 'bg-gray-100']">
