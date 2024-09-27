@@ -94,6 +94,7 @@ const restartTest = () => {
 }
 
 const handleKeyPress = (event: KeyboardEvent) => {
+  if (isInputDisabled.value) return
   event.preventDefault()
   handleInput(event.key)
 }
@@ -121,6 +122,8 @@ const isExceededChar = computed(() => {
 
 // Add this constant for the current year
 const currentYear = new Date().getFullYear()
+
+const isInputDisabled = computed(() => showResults.value)
 </script>
 
 <template>
@@ -147,7 +150,12 @@ const currentYear = new Date().getFullYear()
           <p class="text-2xl">{{ testState.timeLeft }}<span class="text-gray-500">s</span></p>
           <p class="text-xl">{{ wpm }} <span class="text-gray-500">WPM</span></p>
         </div>
-        <div class="my-14 text-center text-4xl leading-loose relative pointer-events-none select-none">
+        <div
+          :class="[
+            'my-14 text-center text-4xl leading-loose relative pointer-events-none select-none',
+            { 'blur-sm': showResults }
+          ]"
+        >
           <p class="flex flex-wrap justify-center gap-x-2">
             <span v-for="(word, wordIndex) in visibleWords" :key="wordIndex" class="relative">
               <span v-for="(char, charIndex) in word" :key="charIndex" class="relative">
@@ -250,5 +258,9 @@ const currentYear = new Date().getFullYear()
 body {
   font-family: "Roboto Mono", monospace;
   letter-spacing: 0.075em;
+}
+
+.blur-sm {
+  filter: blur(2px);
 }
 </style>
