@@ -31,7 +31,6 @@ watch(() => testState.value.currentWordIndex, updateVisibleWords)
 onMounted(() => {
   startTest()
   updateVisibleWords()
-  // Add this line to focus on the main element
   document.querySelector("main")?.focus()
 })
 
@@ -119,11 +118,19 @@ const isExceededChar = computed(() => {
   const currentWord = testState.value.words[testState.value.currentWordIndex]
   return testState.value.currentCharIndex >= currentWord.length
 })
+
+// Add this constant for the current year
+const currentYear = new Date().getFullYear()
 </script>
 
 <template>
-  <main :class="['min-h-screen py-8 ', themeClasses]" @keydown="handleKeyPress" tabindex="0" ref="mainElement">
-    <div class="container mx-auto max-w-6xl">
+  <main
+    :class="['min-h-screen py-8 flex flex-col', themeClasses]"
+    @keydown="handleKeyPress"
+    tabindex="0"
+    ref="mainElement"
+  >
+    <div class="container mx-auto max-w-6xl flex-grow">
       <header class="flex justify-between items-center mb-8">
         <div class="flex items-center">
           <img src="/logo.png" class="w-15 h-10" alt="KeyBurn Logo" />
@@ -222,6 +229,20 @@ const isExceededChar = computed(() => {
         :total-characters-typed="testState.totalCharactersTyped"
       />
     </div>
+
+    <!-- New footer -->
+    <footer class="mt-auto py-4 text-center text-sm text-gray-500">
+      <p>
+        &copy; {{ currentYear }}
+        <a
+          href="https://github.com/rickmff"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="hover:text-yellow-500 transition-colors"
+          >rickmff</a
+        >. All rights reserved.
+      </p>
+    </footer>
   </main>
 </template>
 
