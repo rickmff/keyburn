@@ -58,6 +58,16 @@ export function useTypingTest(wordList: string[], totalWords: number, testDurati
   let gameTimer: number | null = null
   let lastActiveTime: number | null = null
 
+  const WORDS_PER_LINE = 18
+  const visibleLine = ref<string[]>([])
+  const currentLineIndex = ref(0)
+
+  function updateVisibleLine() {
+    const startIndex = Math.floor(testState.value.currentWordIndex / WORDS_PER_LINE) * WORDS_PER_LINE
+    visibleLine.value = testState.value.words.slice(startIndex, startIndex + WORDS_PER_LINE)
+    currentLineIndex.value = Math.floor(testState.value.currentWordIndex / WORDS_PER_LINE)
+  }
+
   function startTest(): void {
     Object.assign(testState.value, {
       words: wordList,
@@ -77,6 +87,8 @@ export function useTypingTest(wordList: string[], totalWords: number, testDurati
     })
     lastActiveTime = null
     if (gameTimer) clearInterval(gameTimer) // Clear any existing game timer
+    currentLineIndex.value = 0
+    updateVisibleLine()
   }
 
   function handleInput(char: string): void {
@@ -116,7 +128,7 @@ export function useTypingTest(wordList: string[], totalWords: number, testDurati
       testState.value.incorrectChars++
     }
 
-    testState.value.typedCharacters.push(isCorrect)
+    testState.value.typedCharacters[currentCharIndex] = isCorrect
     testState.value.totalCharactersTyped++
     testState.value.currentCharIndex++
     testState.value.input += char
@@ -140,17 +152,6 @@ export function useTypingTest(wordList: string[], totalWords: number, testDurati
     } else if (testState.value.currentWordIndex > 0) {
       moveToPreviousWord()
     }
-  }
-
-  function moveToPreviousWord(): void {
-    testState.value.currentWordIndex--
-    const previousWord = testState.value.words[testState.value.currentWordIndex]
-    testState.value.currentCharIndex = Math.min(previousWord.length, MAX_CHARS_PER_WORD)
-    testState.value.input = testState.value.typedWords[testState.value.currentWordIndex] ?? ""
-    testState.value.typedCharacters = testState.value.typedWords[testState.value.currentWordIndex]
-      .split("")
-      .map((char, index) => char === previousWord[index])
-    updateTypedWord()
   }
 
   function updateTypedWord(): void {
@@ -196,6 +197,29 @@ export function useTypingTest(wordList: string[], totalWords: number, testDurati
 
       if (testState.value.currentWordIndex >= testState.value.words.length) {
         endTest()
+      } else if (testState.value.currentWordIndex % WORDS_PER_LINE === 0) {
+        currentLineIndex.value++
+        updateVisibleLine()
+      }
+
+      // Add this line to ensure the visible line is updated even if we're not at the start of a new line
+      updateVisibleLine()
+    }
+  }
+
+  function moveToPreviousWord(): void {
+    if (testState.value.currentWordIndex > 0) {
+      testState.value.currentWordIndex--
+      const previousWord = testState.value.words[testState.value.currentWordIndex]
+      testState.value.input = testState.value.typedWords[testState.value.currentWordIndex] || ""
+      testState.value.currentCharIndex = testState.value.input.length
+      testState.value.typedCharacters = testState.value.input
+        .split("")
+        .map((char, index) => char === previousWord[index])
+
+      if (testState.value.currentWordIndex % WORDS_PER_LINE === WORDS_PER_LINE - 1) {
+        currentLineIndex.value--
+        updateVisibleLine()
       }
     }
   }
@@ -224,6 +248,10 @@ export function useTypingTest(wordList: string[], totalWords: number, testDurati
     handleInput,
     endTest,
     pauseTest,
-    resumeTest
+    resumeTest,
+    visibleLine,
+    currentLineIndex,
+    updateVisibleLine,
+    moveToPreviousWord
   }
 }

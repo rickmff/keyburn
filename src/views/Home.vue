@@ -1,47 +1,53 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch, shallowRef } from "vue"
+import { ref, computed, onMounted, watch } from "vue"
 import { useTypingTest } from "@/composables/useTypingTest"
 import TestResults from "@/components/TestResults.vue"
 import { useTheme } from "@/composables/useTheme"
 import { generateMixedWordList } from "@/utils/generateMixedWordList"
+import InputIndicator from "@/components/InputIndicator.vue"
 
-const WORDS_PER_LINE = 12
+const WORDS_PER_LINE = 18
 const TEST_DURATION = 30
 const WORDS_TO_GENERATE = 200
 
 const WORD_LIST = generateMixedWordList(WORDS_TO_GENERATE)
 
-const { testState, wpm, accuracy, startTest, handleInput, endTest } = useTypingTest(
-  WORD_LIST,
-  WORDS_TO_GENERATE,
-  TEST_DURATION
-)
+const { testState, wpm, accuracy, startTest, handleInput, endTest, visibleLine, currentLineIndex, updateVisibleLine } =
+  useTypingTest(WORD_LIST, WORDS_TO_GENERATE, TEST_DURATION)
 
 const { isDarkMode, toggleTheme, themeClasses } = useTheme()
 
-const visibleWords = shallowRef<string[]>([])
+const cursorPosition = computed(() => ({
+  wordIndex: testState.value.currentWordIndex,
+  charIndex: testState.value.currentCharIndex,
+  lineIndex: Math.floor(testState.value.currentWordIndex / WORDS_PER_LINE)
+}))
+
+const isExceededChar = computed(() => {
+  const currentWord = testState.value.words[testState.value.currentWordIndex]
+  return currentWord ? testState.value.currentCharIndex > currentWord.length : false
+})
 
 const updateVisibleWords = () => {
-  const startIndex = Math.max(0, testState.value.currentWordIndex - WORDS_PER_LINE)
-  visibleWords.value = testState.value.words.slice(startIndex, startIndex + WORDS_PER_LINE * 2)
+  updateVisibleLine()
 }
 
 watch(() => testState.value.currentWordIndex, updateVisibleWords)
 
 onMounted(() => {
   startTest()
-  updateVisibleWords()
+  updateVisibleLine()
   document.querySelector("main")?.focus()
 })
 
 const charStatus = computed(
   () =>
     (wordIndex: number, charIndex: number): "correct" | "incorrect" | "current" | "upcoming" => {
-      const globalIndex = wordIndex + Math.max(0, testState.value.currentWordIndex - WORDS_PER_LINE)
-      const word = testState.value.words[globalIndex]
-      const typedWord = testState.value.typedWords[globalIndex] || ""
+      const globalWordIndex = currentLineIndex.value * WORDS_PER_LINE + wordIndex
+      const word = testState.value.words[globalWordIndex]
+      const typedWord = testState.value.typedWords[globalWordIndex] || ""
 
-      if (globalIndex < testState.value.currentWordIndex) {
+      if (globalWordIndex < testState.value.currentWordIndex) {
         return charIndex < typedWord.length
           ? typedWord[charIndex] === word[charIndex]
             ? "correct"
@@ -49,7 +55,7 @@ const charStatus = computed(
           : "upcoming"
       }
 
-      if (globalIndex === testState.value.currentWordIndex) {
+      if (globalWordIndex === testState.value.currentWordIndex) {
         if (charIndex < testState.value.currentCharIndex) {
           return testState.value.typedCharacters[charIndex] ? "correct" : "incorrect"
         }
@@ -63,7 +69,7 @@ const charStatus = computed(
 )
 
 const getExceededChars = (wordIndex: number): string => {
-  const globalIndex = wordIndex + Math.max(0, testState.value.currentWordIndex - WORDS_PER_LINE)
+  const globalIndex = wordIndex + currentLineIndex.value * WORDS_PER_LINE
   const word = testState.value.words[globalIndex]
   const typedWord = testState.value.typedWords[globalIndex] || ""
   return typedWord.slice(word.length)
@@ -99,29 +105,11 @@ const handleKeyPress = (event: KeyboardEvent) => {
   handleInput(event.key)
 }
 
-const cursorPosition = computed(() => {
-  return {
-    wordIndex: testState.value.currentWordIndex - Math.max(0, testState.value.currentWordIndex - WORDS_PER_LINE),
-    charIndex: testState.value.currentCharIndex
-  }
-})
-
-const MAX_CHARS_PER_WORD = 20 // Make sure this matches the value in useTypingTest.ts
-
-// Add this computed property
 const currentWordExceededChars = computed(() => {
-  const currentWord = testState.value.words[testState.value.currentWordIndex]
+  const currentWord = testState.value.words[testState.value.currentWordIndex] || ""
   const currentTypedWord = testState.value.typedWords[testState.value.currentWordIndex] || ""
-  return currentTypedWord.slice(currentWord.length)
+  return currentWord ? currentTypedWord.slice(currentWord.length) : ""
 })
-
-const isExceededChar = computed(() => {
-  const currentWord = testState.value.words[testState.value.currentWordIndex]
-  return testState.value.currentCharIndex >= currentWord.length
-})
-
-// Add this constant for the current year
-const currentYear = new Date().getFullYear()
 
 const isInputDisabled = computed(() => showResults.value)
 </script>
@@ -150,61 +138,47 @@ const isInputDisabled = computed(() => showResults.value)
           <p class="text-2xl">{{ testState.timeLeft }}<span class="text-gray-500">s</span></p>
           <p class="text-xl">{{ wpm }} <span class="text-gray-500">WPM</span></p>
         </div>
-        <div
-          :class="[
-            'my-14 text-center text-4xl leading-loose relative pointer-events-none select-none',
-            { 'blur-sm': showResults }
-          ]"
-        >
-          <p class="flex flex-wrap justify-center gap-x-2">
-            <span v-for="(word, wordIndex) in visibleWords" :key="wordIndex" class="relative">
-              <span v-for="(char, charIndex) in word" :key="charIndex" class="relative">
+        <div class="typing-container relative">
+          <div :class="['my-14 text-center text-5xl leading-loose relative', { 'blur-sm': showResults }]">
+            <p class="flex flex-wrap justify-center gap-x-2" :data-line-index="currentLineIndex">
+              <span
+                v-for="(word, wordIndex) in visibleLine"
+                :key="wordIndex"
+                class="relative inline-block"
+                :data-word-index="wordIndex + currentLineIndex * WORDS_PER_LINE"
+              >
                 <span
-                  v-if="
-                    wordIndex === cursorPosition.wordIndex && charIndex === cursorPosition.charIndex && !isExceededChar
-                  "
-                  class="sr-only"
-                >
-                  Current position
-                </span>
-                <span
-                  v-if="
-                    wordIndex === cursorPosition.wordIndex && charIndex === cursorPosition.charIndex && !isExceededChar
-                  "
-                  aria-hidden="true"
-                  class="absolute -left-[1px] top-0 w-[2px] h-10 bg-yellow-500 animate-pulse"
-                />
-                <span
+                  v-for="(char, charIndex) in word"
+                  :key="charIndex"
+                  class="relative inline-block char"
                   :class="{
                     'text-green-500': charStatus(wordIndex, charIndex) === 'correct',
                     'text-red-500': charStatus(wordIndex, charIndex) === 'incorrect',
-                    'text-yellow-500': charStatus(wordIndex, charIndex) === 'current',
-                    'text-gray-600': charStatus(wordIndex, charIndex) === 'upcoming'
+                    'text-gray-600': charStatus(wordIndex, charIndex) === 'upcoming',
+                    'text-gray-400': charStatus(wordIndex, charIndex) === 'current'
                   }"
                 >
                   {{ char }}
                 </span>
-              </span>
-              <span class="text-red-500 relative">
-                {{ wordIndex === cursorPosition.wordIndex ? currentWordExceededChars : getExceededChars(wordIndex) }}
-                <span v-if="wordIndex === cursorPosition.wordIndex && isExceededChar" class="sr-only">
-                  Current position (exceeded)
+                <span class="text-red-500 relative char">
+                  {{
+                    wordIndex + currentLineIndex * WORDS_PER_LINE === testState.currentWordIndex
+                      ? currentWordExceededChars
+                      : getExceededChars(wordIndex)
+                  }}
                 </span>
-                <span
-                  v-if="wordIndex === cursorPosition.wordIndex && isExceededChar"
-                  aria-hidden="true"
-                  class="absolute -right-[1px] top-0 w-[2px] h-10 bg-yellow-500 animate-pulse"
-                />
+                {{ wordIndex < visibleLine.length - 1 ? " " : "" }}
               </span>
-              <span
-                v-if="wordIndex === cursorPosition.wordIndex && testState.currentCharIndex >= MAX_CHARS_PER_WORD"
-                class="text-yellow-500 -ml-3"
-              >
-                (max)
-              </span>
-              {{ wordIndex < visibleWords.length - 1 ? " " : "" }}
-            </span>
-          </p>
+            </p>
+          </div>
+          <InputIndicator
+            :word-index="testState.currentWordIndex"
+            :char-index="testState.currentCharIndex"
+            :is-exceeded="isExceededChar"
+            :word-length="testState.words[testState.currentWordIndex]?.length || 0"
+            :line-index="cursorPosition.lineIndex"
+            :total-words="WORDS_PER_LINE"
+          />
         </div>
         <div class="flex justify-center mb-12">
           <button
@@ -241,7 +215,7 @@ const isInputDisabled = computed(() => showResults.value)
     <!-- New footer -->
     <footer class="mt-auto py-4 text-center text-sm text-gray-500">
       <p>
-        &copy; {{ currentYear }}
+        &copy; 2024
         <a
           href="https://github.com/rickmff"
           target="_blank"
@@ -254,7 +228,7 @@ const isInputDisabled = computed(() => showResults.value)
   </main>
 </template>
 
-<style>
+<style scoped>
 body {
   font-family: "Roboto Mono", monospace;
   letter-spacing: 0.075em;
@@ -262,5 +236,15 @@ body {
 
 .blur-sm {
   filter: blur(2px);
+}
+
+.typing-container {
+  position: relative;
+  overflow: hidden;
+}
+
+.char {
+  display: inline-block;
+  position: relative;
 }
 </style>
