@@ -30,7 +30,7 @@ export function useTheme(): ThemeComposable {
   }
 
   const themeClasses = computed(() =>
-    isDarkMode.value ? "dark bg-gray-900 text-white" : "light bg-white text-gray-900"
+    isDarkMode.value ? "dark bg-black text-white" : "light bg-white text-gray-900"
   )
 
   watch(isDarkMode, () => {

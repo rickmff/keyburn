@@ -125,7 +125,7 @@ const isInputDisabled = computed(() => showResults.value)
       <header class="flex justify-between items-center mb-8">
         <div class="flex items-center">
           <img src="/logo.png" class="w-15 h-10" alt="KeyBurn Logo" />
-          <h1 class="text-4xl font-bold text-yellow-500">KeyBurn</h1>
+          <h1 class="text-4xl font-bold text-yellow-500">${ KeyBurn }</h1>
         </div>
         <button @click="toggleTheme" class="p-2 rounded-full hover:bg-gray-700" aria-label="Toggle theme">
           <span v-if="isDarkMode" aria-hidden="true">🌙</span>
@@ -136,7 +136,16 @@ const isInputDisabled = computed(() => showResults.value)
       <div class="mt-32 relative px-5">
         <div class="flex justify-between items-center">
           <p class="text-2xl">{{ testState.timeLeft }}<span class="text-gray-500">s</span></p>
-          <p class="text-xl">{{ wpm }} <span class="text-gray-500">WPM</span></p>
+          <div class="flex items-center gap-4">
+            <p class="text-xl">{{ wpm }} <span class="text-gray-500">WPM</span></p>
+            <button
+              v-if="!showResults && testState.startTime"
+              @click="handleTestEnd"
+              class="bg-yellow-500 text-white font-bold px-4 py-2 rounded-full hover:bg-yellow-400 transition-colors"
+            >
+              End Test
+            </button>
+          </div>
         </div>
         <div class="typing-container relative">
           <div :class="['my-14 text-center text-5xl leading-loose relative', { 'blur-sm': showResults }]">
@@ -180,7 +189,7 @@ const isInputDisabled = computed(() => showResults.value)
             :total-words="WORDS_PER_LINE"
           />
         </div>
-        <div class="flex justify-center mb-12">
+        <div class="flex justify-center mb-12 gap-4">
           <button
             @click="restartTest"
             class="hover:opacity-70 text-yellow-500 font-bold px-4 rounded-full !cursor-pointer duration-300 focus-visible:outline-none"
@@ -208,7 +217,8 @@ const isInputDisabled = computed(() => showResults.value)
         :accuracy="accuracy"
         :correct-chars="testState.correctChars"
         :incorrect-chars="testState.incorrectChars"
-        :total-characters-typed="testState.totalCharactersTyped"
+        :total-characters-typed="testState.correctChars + testState.incorrectChars"
+        :character-stats="testState.mistakes"
       />
     </div>
 

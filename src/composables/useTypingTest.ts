@@ -1,144 +1,153 @@
 import { ref, computed } from "vue"
 
+interface CharacterStats {
+  [key: string]: {
+    total: number
+    mistakes: number
+  }
+}
+
 interface TestState {
   words: string[]
+  typedWords: string[]
   currentWordIndex: number
   currentCharIndex: number
-  input: string
   startTime: number | null
   endTime: number | null
+  timeLeft: number
+  typedCharacters: boolean[]
+  mistakes: { [key: string]: { total: number; mistakes: number } }
   correctChars: number
   incorrectChars: number
-  timeLeft: number
-  isTestActive: boolean
-  totalCharactersTyped: number
-  typedCharacters: boolean[]
-  typedWords: string[]
-  actualTypingTime: number // Add this new property
 }
 
 const MAX_CHARS_PER_WORD = 20
 const VALID_CHAR_REGEX = /^[a-zA-Z0-9\s!"#$%&'()*+,-./:;<=>?@[\]^_`{|}~]$/
 const INACTIVITY_TIMEOUT = 30000
 
-export function useTypingTest(wordList: string[], totalWords: number, testDuration: number) {
+export function useTypingTest(words: string[], totalWords: number, testDuration: number) {
   const testState = ref<TestState>({
-    words: [],
+    words,
+    typedWords: [],
     currentWordIndex: 0,
     currentCharIndex: 0,
-    input: "",
     startTime: null,
     endTime: null,
-    correctChars: 0,
-    incorrectChars: 0,
     timeLeft: testDuration,
-    isTestActive: false,
-    totalCharactersTyped: 0,
     typedCharacters: [],
-    typedWords: [],
-    actualTypingTime: 0 // Add this new property
+    mistakes: {},
+    correctChars: 0,
+    incorrectChars: 0
   })
 
-  const currentWord = computed(() => testState.value.words[testState.value.currentWordIndex] ?? "")
+  const timer = ref<number | null>(null)
 
   const wpm = computed(() => {
-    const { correctChars, actualTypingTime } = testState.value
-    if (actualTypingTime === 0) return 0
-    const timeInMinutes = actualTypingTime / 60000
-    return Math.round(correctChars / 5 / timeInMinutes)
+    if (!testState.value.startTime || testState.value.correctChars === 0) return 0
+    const timeInMinutes = ((testState.value.endTime || Date.now()) - testState.value.startTime) / 60000
+    return Math.round((testState.value.correctChars / 5) / timeInMinutes)
   })
 
   const accuracy = computed(() => {
-    const { correctChars, incorrectChars } = testState.value
-    const totalChars = correctChars + incorrectChars
-    return totalChars > 0 ? Math.round((correctChars / totalChars) * 100) : 0
+    const totalChars = testState.value.correctChars + testState.value.incorrectChars
+    return totalChars > 0
+      ? Math.round((testState.value.correctChars / totalChars) * 100)
+      : 100
   })
 
-  let inactivityTimer: number | null = null
-  let gameTimer: number | null = null
-  let lastActiveTime: number | null = null
+  const rawWpm = computed(() => {
+    if (!testState.value.startTime) return 0
+    const timeInMinutes = ((testState.value.endTime || Date.now()) - testState.value.startTime) / 60000
+    const totalChars = testState.value.correctChars + testState.value.incorrectChars
+    return Math.round((totalChars / 5) / timeInMinutes)
+  })
 
-  const WORDS_PER_LINE = 18
+  const WORDS_PER_LINE = 1 // For code typing, each line is treated as one word
   const visibleLine = ref<string[]>([])
   const currentLineIndex = ref(0)
 
   function updateVisibleLine() {
-    const startIndex = Math.floor(testState.value.currentWordIndex / WORDS_PER_LINE) * WORDS_PER_LINE
-    visibleLine.value = testState.value.words.slice(startIndex, startIndex + WORDS_PER_LINE)
-    currentLineIndex.value = Math.floor(testState.value.currentWordIndex / WORDS_PER_LINE)
+    const startIndex = currentLineIndex.value
+    visibleLine.value = testState.value.words.slice(startIndex, startIndex + 3) // Show 3 lines at a time
   }
 
   function startTest(): void {
-    Object.assign(testState.value, {
-      words: wordList,
+    testState.value = {
+      words,
+      typedWords: [],
       currentWordIndex: 0,
       currentCharIndex: 0,
-      input: "",
       startTime: null,
       endTime: null,
-      correctChars: 0,
-      incorrectChars: 0,
       timeLeft: testDuration,
-      isTestActive: false, // Change this to false
-      totalCharactersTyped: 0,
       typedCharacters: [],
-      typedWords: [],
-      actualTypingTime: 0 // Reset actualTypingTime
-    })
-    lastActiveTime = null
-    if (gameTimer) clearInterval(gameTimer) // Clear any existing game timer
+      mistakes: {},
+      correctChars: 0,
+      incorrectChars: 0
+    }
+
+    if (timer.value) {
+      clearInterval(timer.value)
+      timer.value = null
+    }
+
     currentLineIndex.value = 0
     updateVisibleLine()
   }
 
   function handleInput(char: string): void {
-    const now = Date.now()
-    if (!testState.value.isTestActive) {
-      testState.value.isTestActive = true
-      testState.value.startTime = now
-      startGameTimer()
-      lastActiveTime = now
-    } else if (lastActiveTime) {
-      testState.value.actualTypingTime += now - lastActiveTime
+    // Ignore modifier keys
+    if (['Shift', 'Control', 'Alt', 'Meta', 'CapsLock'].includes(char)) {
+      return
     }
-    lastActiveTime = now
 
-    resetInactivityTimer()
+    if (!testState.value.startTime) {
+      testState.value.startTime = Date.now()
+      startTimer()
+    }
 
-    if (char === "Backspace") {
-      handleBackspace()
-    } else if (VALID_CHAR_REGEX.test(char)) {
-      if (char === " ") {
+    const currentWord = testState.value.words[testState.value.currentWordIndex]
+    
+    if (char === 'Enter') {
+      if (testState.value.currentCharIndex > 0) {
         moveToNextWord()
-      } else if (testState.value.currentCharIndex < MAX_CHARS_PER_WORD) {
-        processCharacter(char)
       }
-    }
-  }
-
-  function processCharacter(char: string): void {
-    const { words, currentWordIndex, currentCharIndex } = testState.value
-    const currentWord = words[currentWordIndex]
-    const expectedChar = currentWord[currentCharIndex]
-    const isCorrect = currentCharIndex < currentWord.length && char === expectedChar
-
-    if (isCorrect) {
-      testState.value.correctChars++
-    } else {
-      testState.value.incorrectChars++
+      return
     }
 
-    testState.value.typedCharacters[currentCharIndex] = isCorrect
-    testState.value.totalCharactersTyped++
-    testState.value.currentCharIndex++
-    testState.value.input += char
-    updateTypedWord()
+    if (char === 'Backspace') {
+      handleBackspace()
+      return
+    }
+
+    if (testState.value.currentCharIndex < currentWord.length) {
+      const isCorrect = currentWord[testState.value.currentCharIndex] === char
+      
+      // Initialize character stats if not exists
+      if (!testState.value.mistakes[char]) {
+        testState.value.mistakes[char] = {
+          total: 0,
+          mistakes: 0
+        }
+      }
+
+      // Update character statistics
+      testState.value.mistakes[char].total++
+      if (!isCorrect) {
+        testState.value.mistakes[char].mistakes++
+        testState.value.incorrectChars++
+      } else {
+        testState.value.correctChars++
+      }
+
+      testState.value.typedCharacters[testState.value.currentCharIndex] = isCorrect
+      testState.value.currentCharIndex++
+    }
   }
 
   function handleBackspace(): void {
     if (testState.value.currentCharIndex > 0) {
       testState.value.currentCharIndex--
-      testState.value.input = testState.value.input.slice(0, -1)
       const lastCharStatus = testState.value.typedCharacters.pop()
 
       if (lastCharStatus) {
@@ -146,112 +155,69 @@ export function useTypingTest(wordList: string[], totalWords: number, testDurati
       } else {
         testState.value.incorrectChars--
       }
-
-      testState.value.totalCharactersTyped--
-      updateTypedWord()
-    } else if (testState.value.currentWordIndex > 0) {
-      moveToPreviousWord()
     }
   }
 
-  function updateTypedWord(): void {
-    testState.value.typedWords[testState.value.currentWordIndex] = testState.value.input
+  function moveToNextWord(): void {
+    testState.value.typedWords[testState.value.currentWordIndex] = 
+      testState.value.words[testState.value.currentWordIndex]
+        .slice(0, testState.value.currentCharIndex)
+
+    testState.value.currentWordIndex++
+    testState.value.currentCharIndex = 0
+    testState.value.typedCharacters = []
+
+    if (testState.value.currentWordIndex >= testState.value.words.length) {
+      endTest()
+    } else {
+      currentLineIndex.value = Math.floor(testState.value.currentWordIndex / WORDS_PER_LINE)
+      updateVisibleLine()
+    }
   }
 
-  function startGameTimer(): void {
-    if (gameTimer) clearInterval(gameTimer) // Clear any existing timer before starting a new one
-    gameTimer = window.setInterval(() => {
-      if (testState.value.timeLeft > 0 && testState.value.isTestActive) {
+  function startTimer(): void {
+    timer.value = window.setInterval(() => {
+      if (testState.value.timeLeft > 0) {
         testState.value.timeLeft--
-        if (lastActiveTime) {
-          const now = Date.now()
-          testState.value.actualTypingTime += now - lastActiveTime
-          lastActiveTime = now
-        }
-      } else if (testState.value.timeLeft === 0) {
+      } else {
         endTest()
       }
     }, 1000)
   }
 
-  function resetInactivityTimer(): void {
-    if (inactivityTimer) clearTimeout(inactivityTimer)
-    inactivityTimer = window.setTimeout(endTest, INACTIVITY_TIMEOUT)
-  }
-
   function endTest(): void {
-    testState.value.isTestActive = false
-    testState.value.endTime = Date.now()
-    if (inactivityTimer) clearTimeout(inactivityTimer)
-    if (gameTimer) clearInterval(gameTimer)
-    lastActiveTime = null
-  }
+    if (timer.value) {
+      clearInterval(timer.value)
+      timer.value = null
+    }
 
-  function moveToNextWord(): void {
-    if (testState.value.currentCharIndex > 0) {
-      testState.value.typedWords[testState.value.currentWordIndex] = testState.value.input
-      testState.value.currentWordIndex++
-      testState.value.currentCharIndex = 0
-      testState.value.input = ""
-      testState.value.typedCharacters = []
-
-      if (testState.value.currentWordIndex >= testState.value.words.length) {
-        endTest()
-      } else if (testState.value.currentWordIndex % WORDS_PER_LINE === 0) {
-        currentLineIndex.value++
-        updateVisibleLine()
-      }
-
-      // Add this line to ensure the visible line is updated even if we're not at the start of a new line
-      updateVisibleLine()
+    if (!testState.value.endTime) {
+      testState.value.endTime = Date.now()
+      
+      const testDurationInSeconds = (testState.value.endTime - testState.value.startTime!) / 1000
+      const consistencyScore = calculateConsistencyScore(testDurationInSeconds)
     }
   }
 
-  function moveToPreviousWord(): void {
-    if (testState.value.currentWordIndex > 0) {
-      testState.value.currentWordIndex--
-      const previousWord = testState.value.words[testState.value.currentWordIndex]
-      testState.value.input = testState.value.typedWords[testState.value.currentWordIndex] || ""
-      testState.value.currentCharIndex = testState.value.input.length
-      testState.value.typedCharacters = testState.value.input
-        .split("")
-        .map((char, index) => char === previousWord[index])
-
-      if (testState.value.currentWordIndex % WORDS_PER_LINE === WORDS_PER_LINE - 1) {
-        currentLineIndex.value--
-        updateVisibleLine()
-      }
-    }
-  }
-
-  function pauseTest(): void {
-    testState.value.isTestActive = false
-    if (gameTimer) clearInterval(gameTimer)
-  }
-
-  function resumeTest(): void {
-    if (!testState.value.isTestActive) {
-      testState.value.isTestActive = true
-      if (!testState.value.startTime) {
-        testState.value.startTime = Date.now()
-      }
-      startGameTimer()
-    }
+  function calculateConsistencyScore(testDuration: number): number {
+    const wordsTyped = testState.value.currentWordIndex
+    const averageWordsPerSecond = wordsTyped / testDuration
+    const expectedWordsAtEnd = averageWordsPerSecond * testDuration
+    const deviation = Math.abs(wordsTyped - expectedWordsAtEnd)
+    const consistencyScore = Math.max(0, 100 - (deviation / expectedWordsAtEnd) * 100)
+    return Math.round(consistencyScore)
   }
 
   return {
     testState,
-    currentWord,
     wpm,
     accuracy,
+    rawWpm,
     startTest,
     handleInput,
     endTest,
-    pauseTest,
-    resumeTest,
     visibleLine,
     currentLineIndex,
-    updateVisibleLine,
-    moveToPreviousWord
+    updateVisibleLine
   }
 }
