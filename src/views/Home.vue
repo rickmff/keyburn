@@ -135,9 +135,9 @@ const isInputDisabled = computed(() => showResults.value)
 
       <div class="mt-32 relative px-5">
         <div class="flex justify-between items-center">
-          <p class="text-2xl">{{ testState.timeLeft }}<span class="text-gray-500">s</span></p>
+          <p class="text-2xl">{{ testState.timeLeft }}<span class="text-gray-700">s</span></p>
           <div class="flex items-center gap-4">
-            <p class="text-xl">{{ wpm }} <span class="text-gray-500">WPM</span></p>
+            <p class="text-xl">{{ wpm }} <span class="text-gray-700">WPM</span></p>
             <button
               v-if="!showResults && testState.startTime"
               @click="handleTestEnd"
@@ -223,7 +223,7 @@ const isInputDisabled = computed(() => showResults.value)
     </div>
 
     <!-- New footer -->
-    <footer class="mt-auto py-4 text-center text-sm text-gray-500">
+    <footer class="mt-auto py-4 text-center text-sm text-gray-700">
       <p>
         &copy; 2024
         <a

@@ -116,7 +116,7 @@ onMounted(() => {
         <div class="container mx-auto max-w-9xl flex-grow">
             <header class="flex justify-between items-center mb-8 px-5">
                 <div class="flex items-center">
-                    <h1 class="text-4xl font-bold text-yellow-500"><span class="text-gray-500">${</span> KeyBurn <span class="text-gray-500">}</span></h1>
+                    <h1 class="text-4xl font-bold text-yellow-500"><span class="text-gray-700">${</span> KeyBurn <span class="text-gray-700">}</span></h1>
                 </div>
                 <div class="flex items-center gap-8">
                     <p class="text-2xl" :class="{
@@ -124,9 +124,9 @@ onMounted(() => {
                         'text-yellow-500': testState.timeLeft <= 30 && testState.timeLeft > 10,
                         'text-gray-200': testState.timeLeft > 30
                     }">
-                        {{ testState.timeLeft }}<span class="text-gray-500">s</span>
+                        {{ testState.timeLeft }}<span class="text-gray-700">s</span>
                     </p>
-                    <p class="text-xl">{{ wpm }} <span class="text-gray-500">WPM</span></p>
+                    <p class="text-xl">{{ wpm }} <span class="text-gray-700">WPM</span></p>
                 </div>
             </header>
 
@@ -134,7 +134,7 @@ onMounted(() => {
                 <!-- Code container -->
                 <div class="code-container relative font-mono max-h-[80vh]"
                      :class="{ 'pointer-events-none': showResults }">
-                    <div class="absolute top-2 right-2 text-gray-500">
+                    <div class="absolute top-2 right-2 text-gray-700">
                         {{ testState.currentSnippet?.title || '' }}
                     </div>
                     <div :class="['my-8 text-left text-lg leading-relaxed relative', { 'blur-sm': showResults }]">
@@ -144,7 +144,7 @@ onMounted(() => {
                   :class="['code-line flex -my-10', getLineClass(lineIndex)]"
                   :data-line-index="lineIndex"
                 >
-                  <span class="line-number select-none px-4 text-gray-500">{{ lineIndex < 9 ? '0' + (lineIndex + 1) : lineIndex + 1 }}</span>
+                  <span class="line-number select-none px-4 text-gray-700">{{ lineIndex < 9 ? '0' + (lineIndex + 1) : lineIndex + 1 }}</span>
                   <span class="line-content flex-1">
                     <template v-for="(char, charIndex) in line" :key="charIndex">
                       <span
