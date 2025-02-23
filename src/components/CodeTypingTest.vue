@@ -132,7 +132,7 @@ onMounted(() => {
 
             <div class="relative">
                 <!-- Code container -->
-                <div class="code-container relative font-mono max-h-[80vh]"
+                <div class="code-container relative font-mono min-h-[80vh]"
                      :class="{ 'pointer-events-none': showResults }">
                     <div class="absolute top-2 right-2 text-gray-700">
                         {{ testState.currentSnippet?.title || '' }}
