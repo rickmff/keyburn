@@ -175,14 +175,12 @@ onMounted(() => {
                 <div v-if="showResults" class="absolute inset-0 bg-black/80 backdrop-blur-sm 
                     flex flex-col items-center justify-start rounded-lg z-10 p-6 overflow-y-hidden">
                     <div class="text-center p-6 rounded-lg border border-gray-500 w-full max-w-4xl mb-2">
-                        <h2 class="text-3xl font-bold text-yellow-500 mb-2">Test Complete! 🎉</h2>
-                        <div class="flex items-center justify-center gap-4 mt-4">
+                        <div class="flex items-center justify-center gap-4">
                             <button @click="restartTest" 
                                 class="bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-2 px-6 rounded-full transition-all duration-300 flex items-center gap-2">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                                     <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd"/>
                                 </svg>
-                                Start New Test
                             </button>
                             <span class="text-gray-400">or press</span>
                             <kbd class="px-2 py-1 bg-gray-700 rounded text-sm text-gray-300 font-mono">Enter ↵</kbd>
@@ -261,7 +259,7 @@ code {
     display: flex;
     align-items: center;
     width: 100%;
-    font-size: 1.8rem;
+    font-size: 2rem;
 }
 
 .line-number {
