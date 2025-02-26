@@ -4,12 +4,14 @@ import { useCodeTypingTest } from "@/composables/useCodeTypingTest"
 import { getRandomCodeSnippet } from "@/utils/generateCodeSnippets"
 import TestResults from "@/components/TestResults.vue"
 import KeyboardHeatmap from "@/components/KeyboardHeatmap.vue"
+import TimeSettings from "@/components/TimeSettings.vue"
 import { useTheme } from "@/composables/useTheme"
 
-const TEST_DURATION = 60 // 1 minute
+const testDuration = ref(30) // Default 30 seconds
 const WORDS_PER_LINE = 1 // For code typing, each line is treated as one word
+const showTimeSettings = ref(false)
 
-const { testState, lines, currentLine, wpm, accuracy, startTest, handleInput, endTest } = useCodeTypingTest(TEST_DURATION)
+const { testState, lines, currentLine, wpm, accuracy, startTest, handleInput, endTest, updateDuration } = useCodeTypingTest(testDuration.value)
 const { isDarkMode, themeClasses } = useTheme()
 
 const showResults = ref(false)
@@ -25,6 +27,16 @@ watch(() => testState.value.timeLeft, (newValue) => {
         handleTestEnd()
     }
 })
+
+const handleTimeChange = (newTime: number) => {
+    testDuration.value = newTime
+    updateDuration(newTime)
+    showTimeSettings.value = false
+    // Only restart if the test hasn't started yet
+    if (!testState.value.startTime) {
+        restartTest()
+    }
+}
 
 const restartTest = () => {
     showResults.value = false
@@ -112,21 +124,39 @@ onMounted(() => {
 </script>
 
 <template>
-    <main :class="['min-h-screen py-20 flex flex-col', themeClasses]" @keydown="handleKeyPress" tabindex="0">
+    <main :class="['min-h-screen py-14 flex flex-col', themeClasses]" @keydown="handleKeyPress" tabindex="0">
         <div class="container mx-auto max-w-9xl flex-grow">
             <header class="flex justify-between items-center mb-8 px-5">
                 <div class="flex items-center">
-                    <h1 class="text-4xl font-bold text-yellow-500"><span class="text-gray-700">${</span> KeyBurn <span class="text-gray-700">}</span></h1>
+                    <h1 class="text-4xl font-bold text-yellow-500">
+                        <span class="text-gray-700">${</span> KeyBurn <span class="text-gray-700">}</span>
+                        <span class="text-yellow-500 text-sm ml-2 font-normal">Beta</span>
+                    </h1>
                 </div>
                 <div class="flex items-center gap-8">
-                    <p class="text-2xl" :class="{
-                        'text-red-500': testState.timeLeft <= 10,
-                        'text-yellow-500': testState.timeLeft <= 30 && testState.timeLeft > 10,
-                        'text-gray-200': testState.timeLeft > 30
-                    }">
-                        {{ testState.timeLeft }}<span class="text-gray-700">s</span>
+                    <div class="relative group">
+                        <p 
+                            class="time-display"
+                            @click="showTimeSettings = !showTimeSettings"
+                            :class="{
+                                'text-red-500': testState.timeLeft <= 10,
+                                'text-yellow-500': testState.timeLeft <= 30 && testState.timeLeft > 10,
+                                'text-gray-200': testState.timeLeft > 30,
+                                'opacity-70': !testState.startTime
+                            }"
+                        >
+                            {{ testState.timeLeft }}<span class="text-gray-700">s</span>
+                        </p>
+                        <TimeSettings
+                            :current-time="testDuration"
+                            :show="showTimeSettings"
+                            @update:time="handleTimeChange"
+                            @mouseleave="showTimeSettings = false"
+                        />
+                    </div>
+                    <p class="text-xl" :class="{ 'opacity-50': !testState.startTime }">
+                        {{ wpm }} <span class="text-gray-700">WPM</span>
                     </p>
-                    <p class="text-xl">{{ wpm }} <span class="text-gray-700">WPM</span></p>
                     <button
                         @click="restartTest"
                         class="bg-gray-900 hover:bg-yellow-500 text-white px-4 py-2 rounded-full transition-colors duration-500 flex items-center gap-2"
@@ -141,7 +171,7 @@ onMounted(() => {
 
             <div class="relative">
                 <!-- Code container -->
-                <div class="code-container relative font-mono min-h-[80vh]"
+                <div class="code-container relative font-mono max-h-[80vh]"
                      :class="{ 'pointer-events-none': showResults }">
                     <div class="absolute top-2 right-2 text-gray-700">
                         {{ testState.currentSnippet?.title || '' }}
@@ -173,7 +203,7 @@ onMounted(() => {
 
                 <!-- Results overlay -->
                 <div v-if="showResults" class="absolute inset-0 bg-black/80 backdrop-blur-sm 
-                    flex flex-col items-center justify-start rounded-lg z-10 p-6 overflow-y-hidden">
+                    flex flex-col items-center justify-start rounded-lg z-10 overflow-y-hidden">
                     <div class="text-center p-6 rounded-lg border border-gray-500 w-full max-w-4xl mb-2">
                         <div class="flex items-center justify-center gap-4">
                             <button @click="restartTest" 
@@ -199,6 +229,20 @@ onMounted(() => {
                 </div>
             </div>
         </div>
+        <!-- Footer -->
+        <footer class="mt-auto py-4 text-center text-sm text-gray-700">
+            <p>
+                Created by
+                <a
+                    href="https://github.com/rickmff"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="text-yellow-500 hover:text-yellow-400 transition-colors duration-300"
+                >
+                    Rickmff
+                </a>
+            </p>
+        </footer>
     </main>
 </template>
 
@@ -206,7 +250,6 @@ onMounted(() => {
 .code-container {
     background-color: #000000;
     border-radius: 8px;
-    padding: 1.5rem;
     overflow-x: auto;
     position: relative;
     width: 100%;
@@ -354,5 +397,39 @@ code {
 
 .backdrop-blur-sm {
     backdrop-filter: blur(4px);
+}
+
+.time-display {
+    @apply text-2xl cursor-pointer transition-all duration-300 relative;
+    padding: 0.5rem 1rem;
+    border-radius: 9999px;
+}
+
+.time-display:hover {
+    @apply bg-gray-800;
+}
+
+.tooltip {
+    @apply absolute -bottom-8 left-1/2 transform -translate-x-1/2 px-2 py-1 
+           text-xs text-gray-300 bg-gray-800 rounded-md opacity-0 transition-opacity duration-200;
+    white-space: nowrap;
+}
+
+.group:hover .tooltip {
+    @apply opacity-100;
+}
+
+/* Add a subtle pulse animation when time is low */
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.7;
+    }
+}
+
+.time-display.text-red-500 {
+    animation: pulse 2s ease-in-out infinite;
 }
 </style>

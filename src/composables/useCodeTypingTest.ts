@@ -23,7 +23,8 @@ interface CodeTestState {
 
 const INACTIVITY_TIMEOUT = 30000
 
-export function useCodeTypingTest(testDuration: number) {
+export function useCodeTypingTest(initialDuration: number) {
+  const duration = ref(initialDuration)
   const testState = ref<CodeTestState>({
     currentSnippet: null,
     input: [],
@@ -31,7 +32,7 @@ export function useCodeTypingTest(testDuration: number) {
     endTime: null,
     correctChars: 0,
     incorrectChars: 0,
-    timeLeft: testDuration,
+    timeLeft: duration.value,
     isTestActive: false,
     currentLineIndex: 0,
     typedLines: [],
@@ -72,7 +73,7 @@ export function useCodeTypingTest(testDuration: number) {
       endTime: null,
       correctChars: 0,
       incorrectChars: 0,
-      timeLeft: testDuration,
+      timeLeft: duration.value,
       isTestActive: false,
       currentLineIndex: 0,
       typedLines: Array(snippet.code.split('\n').length).fill(''),
@@ -80,7 +81,10 @@ export function useCodeTypingTest(testDuration: number) {
       mistakes: {}
     })
     lastActiveTime = null
-    if (gameTimer) clearInterval(gameTimer)
+    if (gameTimer) {
+      clearInterval(gameTimer)
+      gameTimer = null
+    }
   }
 
   function handleInput(char: string): void {
@@ -89,8 +93,10 @@ export function useCodeTypingTest(testDuration: number) {
       return
     }
 
+    // Start the test and timer on first input
     if (!testState.value.startTime) {
       testState.value.startTime = Date.now()
+      testState.value.isTestActive = true
       startGameTimer()
     }
 
@@ -234,6 +240,7 @@ export function useCodeTypingTest(testDuration: number) {
         }
       }
     }, 1000)
+    lastActiveTime = Date.now() // Initialize lastActiveTime when timer starts
   }
 
   function resetInactivityTimer(): void {
@@ -256,6 +263,13 @@ export function useCodeTypingTest(testDuration: number) {
     }
   }
 
+  function updateDuration(newDuration: number): void {
+    duration.value = newDuration
+    if (!testState.value.startTime) {
+      testState.value.timeLeft = newDuration
+    }
+  }
+
   return {
     testState,
     lines,
@@ -264,6 +278,7 @@ export function useCodeTypingTest(testDuration: number) {
     accuracy,
     startTest,
     handleInput,
-    endTest
+    endTest,
+    updateDuration
   }
 } 
