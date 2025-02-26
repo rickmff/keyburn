@@ -89,7 +89,7 @@ export function useCodeTypingTest(initialDuration: number) {
 
   function handleInput(char: string): void {
     // Ignore modifier keys
-    if (['Shift', 'Control', 'Alt', 'Meta', 'CapsLock'].includes(char)) {
+    if (['Shift', 'Control', 'Alt', 'Meta', 'CapsLock', 'Tab', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(char)) {
       return
     }
 
