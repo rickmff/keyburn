@@ -29,7 +29,7 @@ const getKeyStats = (key: string) => {
 
 const getHeatMapColor = (accuracy: number) => {
   // Red to green gradient based on accuracy
-  const hue = (accuracy * 1.2) // 120 is green in HSL
+  const hue = Math.min(120, accuracy * 1.2) // Cap at 120 (green) in HSL
   return `hsl(${hue}, 70%, 50%)`
 }
 </script>
@@ -42,7 +42,7 @@ const getHeatMapColor = (accuracy: number) => {
         :key="key"
         class="key-cell group relative"
         :style="{
-          backgroundColor: getHeatMapColor(getKeyStats(key).accuracy)
+          backgroundColor: getKeyStats(key).total > 0 ? getHeatMapColor(getKeyStats(key).accuracy) : '#444'
         }"
       >
         {{ key.toUpperCase() }}

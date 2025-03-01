@@ -3,7 +3,6 @@ import { ref, computed, onMounted, watch } from "vue"
 import { useCodeTypingTest } from "@/composables/useCodeTypingTest"
 import { getRandomCodeSnippet } from "@/utils/generateCodeSnippets"
 import TestResults from "@/components/TestResults.vue"
-import KeyboardHeatmap from "@/components/KeyboardHeatmap.vue"
 import TimeSettings from "@/components/TimeSettings.vue"
 import { useTheme } from "@/composables/useTheme"
 

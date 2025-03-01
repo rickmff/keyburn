@@ -85,6 +85,10 @@ export function useCodeTypingTest(initialDuration: number) {
       clearInterval(gameTimer)
       gameTimer = null
     }
+    if (inactivityTimer) {
+      clearTimeout(inactivityTimer)
+      inactivityTimer = null
+    }
   }
 
   function handleInput(char: string): void {
@@ -99,6 +103,9 @@ export function useCodeTypingTest(initialDuration: number) {
       testState.value.isTestActive = true
       startGameTimer()
     }
+
+    // Reset inactivity timer on each input
+    resetInactivityTimer()
 
     const currentLine = lines.value[testState.value.currentLineIndex]
     
@@ -137,54 +144,6 @@ export function useCodeTypingTest(initialDuration: number) {
         testState.value.input[testState.value.currentLineIndex] = currentInput + char
         testState.value.typedLines[testState.value.currentLineIndex] = testState.value.input[testState.value.currentLineIndex]
       }
-    }
-  }
-
-  function moveToNextNonSpace(): void {
-    const currentLineText = lines.value[testState.value.currentLineIndex] || ''
-    const currentInput = testState.value.input[testState.value.currentLineIndex] || ''
-    let nextIndex = currentInput.length
-
-    // Skip all consecutive whitespace
-    while (nextIndex < currentLineText.length) {
-      const char = currentLineText[nextIndex]
-      if (char !== ' ' && char !== '\t') break
-      
-      testState.value.input[testState.value.currentLineIndex] = (currentInput || '') + char
-      testState.value.typedLines[testState.value.currentLineIndex] = testState.value.input[testState.value.currentLineIndex]
-      nextIndex++
-    }
-
-    // If we reached the end of the line or found a non-space character
-    if (nextIndex >= currentLineText.length) {
-      moveToNextLine()
-    }
-  }
-
-  function isValidChar(char: string): boolean {
-    return char.length === 1 && !char.match(/[\u0000-\u001F\u007F-\u009F]/) && char !== ' '
-  }
-
-  function processCharacter(char: string): void {
-    const currentLineText = lines.value[testState.value.currentLineIndex] || ''
-    const currentInput = testState.value.input[testState.value.currentLineIndex] || ''
-    
-    if (currentInput.length < currentLineText.length + 10) { // Allow some buffer for extra chars
-      const expectedChar = currentLineText[currentInput.length] || ''
-      
-      // Only validate and count non-whitespace characters
-      if (expectedChar !== ' ' && expectedChar !== '\t' && expectedChar !== '\n') {
-        const isCorrect = char === expectedChar
-        if (isCorrect) {
-          testState.value.correctChars++
-        } else {
-          testState.value.incorrectChars++
-        }
-      }
-
-      // Always update input regardless of character type
-      testState.value.input[testState.value.currentLineIndex] = currentInput + char
-      testState.value.typedLines[testState.value.currentLineIndex] = testState.value.input[testState.value.currentLineIndex]
     }
   }
 
@@ -252,7 +211,10 @@ export function useCodeTypingTest(initialDuration: number) {
     if (!testState.value.endTime) {  // Only update if not already ended
       testState.value.isTestActive = false
       testState.value.endTime = Date.now()
-      if (inactivityTimer) clearTimeout(inactivityTimer)
+      if (inactivityTimer) {
+        clearTimeout(inactivityTimer)
+        inactivityTimer = null
+      }
       if (gameTimer) {
         clearInterval(gameTimer)
         gameTimer = null
