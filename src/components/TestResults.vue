@@ -78,9 +78,6 @@ const errorsPerMinute = computed(() => (props.incorrectChars / (props.totalChara
         Detailed Statistics
       </h3>
       <div class="grid grid-cols-2 gap-4">
-
-
-      <div class="grid grid-cols-2 gap-4">
         <div class="stat-item hover:bg-gray-600 transition-colors duration-300">
           <div class="stat-label">Total Keystrokes</div>
           <div class="stat-value">{{ totalCharactersTyped }}</div>
@@ -104,11 +101,10 @@ const errorsPerMinute = computed(() => (props.incorrectChars / (props.totalChara
       </div>
       
       <!-- Keyboard Heatmap -->
-      <div class="bg-black rounded-lg border border-gray-500 p-4">
+      <div class="bg-black rounded-lg border border-gray-500 p-4 mt-4">
         <h4 class="text-lg font-semibold mb-3">Keyboard Performance</h4>
-          <KeyboardHeatmap :character-stats="characterStats" />
+        <KeyboardHeatmap :character-stats="characterStats" />
       </div>
-    </div>
     </div>
   </div>
 </template>
@@ -137,4 +133,4 @@ const errorsPerMinute = computed(() => (props.incorrectChars / (props.totalChara
 .progress-item {
   @apply bg-gray-700 rounded-lg p-4 shadow-md;
 }
-</style>
+</style> 

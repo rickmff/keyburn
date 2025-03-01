@@ -30,3 +30,8 @@ coverage
 
 *.tsbuildinfo
 *.map
+
+# Environment variables
+.env
+.env.*
+!.env.example

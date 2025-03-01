@@ -92,19 +92,16 @@ export function useCodeTypingTest(initialDuration: number) {
   }
 
   function handleInput(char: string): void {
-    // Ignore modifier keys
     if (['Shift', 'Control', 'Alt', 'Meta', 'CapsLock', 'Tab', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(char)) {
       return
     }
 
-    // Start the test and timer on first input
     if (!testState.value.startTime) {
       testState.value.startTime = Date.now()
       testState.value.isTestActive = true
       startGameTimer()
     }
 
-    // Reset inactivity timer on each input
     resetInactivityTimer()
 
     const currentLine = lines.value[testState.value.currentLineIndex]
@@ -122,7 +119,6 @@ export function useCodeTypingTest(initialDuration: number) {
     if (currentLine) {
       const expectedChar = currentLine[testState.value.input[testState.value.currentLineIndex]?.length || 0]
       if (expectedChar) {
-        // Initialize character stats if not exists
         if (!testState.value.mistakes[expectedChar]) {
           testState.value.mistakes[expectedChar] = {
             total: 0,
@@ -130,7 +126,6 @@ export function useCodeTypingTest(initialDuration: number) {
           }
         }
 
-        // Update character statistics
         testState.value.mistakes[expectedChar].total++
         if (char !== expectedChar) {
           testState.value.mistakes[expectedChar].mistakes++
@@ -139,7 +134,6 @@ export function useCodeTypingTest(initialDuration: number) {
           testState.value.correctChars++
         }
 
-        // Update input
         const currentInput = testState.value.input[testState.value.currentLineIndex] || ''
         testState.value.input[testState.value.currentLineIndex] = currentInput + char
         testState.value.typedLines[testState.value.currentLineIndex] = testState.value.input[testState.value.currentLineIndex]
@@ -153,7 +147,6 @@ export function useCodeTypingTest(initialDuration: number) {
       const lastChar = currentInput[currentInput.length - 1]
       const expectedChar = lines.value[testState.value.currentLineIndex][currentInput.length - 1]
       
-      // Only decrement counters for non-whitespace characters
       if (expectedChar !== ' ' && expectedChar !== '\t' && expectedChar !== '\n') {
         if (lastChar === expectedChar) {
           testState.value.correctChars = Math.max(0, testState.value.correctChars - 1)
@@ -193,13 +186,12 @@ export function useCodeTypingTest(initialDuration: number) {
           testState.value.actualTypingTime += now - lastActiveTime
           lastActiveTime = now
         }
-        // Check if time just reached 0
         if (testState.value.timeLeft === 0) {
           endTest()
         }
       }
     }, 1000)
-    lastActiveTime = Date.now() // Initialize lastActiveTime when timer starts
+    lastActiveTime = Date.now()
   }
 
   function resetInactivityTimer(): void {
@@ -208,7 +200,7 @@ export function useCodeTypingTest(initialDuration: number) {
   }
 
   function endTest(): void {
-    if (!testState.value.endTime) {  // Only update if not already ended
+    if (!testState.value.endTime) {
       testState.value.isTestActive = false
       testState.value.endTime = Date.now()
       if (inactivityTimer) {
@@ -220,7 +212,6 @@ export function useCodeTypingTest(initialDuration: number) {
         gameTimer = null
       }
       lastActiveTime = null
-      // Ensure timeLeft is 0 when test ends
       testState.value.timeLeft = 0
     }
   }

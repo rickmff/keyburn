@@ -79,7 +79,6 @@ const handleTimeChange = (time: number) => {
   transform: scale(1.05);
 }
 
-/* Add a subtle hover effect to the container */
 .time-settings::before {
   content: '';
   position: absolute;

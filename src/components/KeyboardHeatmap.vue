@@ -28,14 +28,13 @@ const getKeyStats = (key: string) => {
 }
 
 const getHeatMapColor = (accuracy: number) => {
-  // Red to green gradient based on accuracy
-  const hue = Math.min(120, accuracy * 1.2) // Cap at 120 (green) in HSL
+  const hue = Math.min(120, accuracy * 1.2)
   return `hsl(${hue}, 70%, 50%)`
 }
 </script>
 
 <template>
-  <div class="keyboard-heatmap p-4 py-10 bg-gray- rounded-lg border border-gray-500">
+  <div class="keyboard-heatmap p-4 py-10 bg-gray-800 rounded-lg border border-gray-500">
     <div v-for="(row, rowIndex) in keyboardLayout" :key="rowIndex" class="flex justify-center gap-1 mb-1">
       <div
         v-for="key in row"
@@ -46,7 +45,6 @@ const getHeatMapColor = (accuracy: number) => {
         }"
       >
         {{ key.toUpperCase() }}
-        <!-- Tooltip -->
         <div class="tooltip">
           <div class="text-xs">
             <div>Accuracy: {{ Math.round(getKeyStats(key).accuracy) }}%</div>

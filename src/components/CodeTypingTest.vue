@@ -5,22 +5,47 @@ import { getRandomCodeSnippet } from "@/utils/generateCodeSnippets"
 import TestResults from "@/components/TestResults.vue"
 import TimeSettings from "@/components/TimeSettings.vue"
 import { useTheme } from "@/composables/useTheme"
+import { useUser } from '@clerk/vue'
+import { saveTestResult } from '@/lib/supabase'
+import { useRouter } from 'vue-router'
 
-const testDuration = ref(30) // Default 30 seconds
-const WORDS_PER_LINE = 1 // For code typing, each line is treated as one word
+const router = useRouter()
+const { user, isSignedIn } = useUser()
+const testDuration = ref(30)
+const WORDS_PER_LINE = 1
 const showTimeSettings = ref(false)
+const resultSaved = ref(false)
 
 const { testState, lines, currentLine, wpm, accuracy, startTest, handleInput, endTest, updateDuration } = useCodeTypingTest(testDuration.value)
 const { isDarkMode, themeClasses } = useTheme()
 
 const showResults = ref(false)
 
-const handleTestEnd = () => {
+const handleTestEnd = async () => {
     endTest()
     showResults.value = true
+    
+    // Save results to Supabase if user is signed in
+    if (isSignedIn && user?.value?.id && !resultSaved.value) {
+        try {
+            await saveTestResult({
+                user_id: user.value.id,
+                wpm: wpm.value,
+                accuracy: accuracy.value,
+                correct_chars: testState.value.correctChars,
+                incorrect_chars: testState.value.incorrectChars,
+                total_characters_typed: testState.value.correctChars + testState.value.incorrectChars,
+                character_stats: testState.value.mistakes,
+                snippet_title: testState.value.currentSnippet?.title,
+                test_duration: testDuration.value
+            })
+            resultSaved.value = true
+        } catch (error) {
+            console.error('Error saving test result:', error)
+        }
+    }
 }
 
-// Watch for time reaching zero
 watch(() => testState.value.timeLeft, (newValue) => {
     if (newValue === 0) {
         handleTestEnd()
@@ -31,7 +56,6 @@ const handleTimeChange = (newTime: number) => {
     testDuration.value = newTime
     updateDuration(newTime)
     showTimeSettings.value = false
-    // Only restart if the test hasn't started yet
     if (!testState.value.startTime) {
         restartTest()
     }
@@ -39,6 +63,7 @@ const handleTimeChange = (newTime: number) => {
 
 const restartTest = () => {
     showResults.value = false
+    resultSaved.value = false
     startTest(getRandomCodeSnippet())
 }
 
@@ -55,7 +80,6 @@ const getCharClass = (lineIndex: number, charIndex: number) => {
     const expectedLine = lines.value[lineIndex] || ''
     const expectedChar = expectedLine[charIndex]
     
-    // Don't show error/correct status for whitespace
     if (expectedChar === ' ' || expectedChar === '\t' || expectedChar === '\n') {
         return 'whitespace'
     }
@@ -78,7 +102,6 @@ const getCharClass = (lineIndex: number, charIndex: number) => {
 
 const handleKeyPress = (event: KeyboardEvent) => {
     if (showResults.value || testState.value.timeLeft === 0) {
-        // Only allow restart on 'Enter' key when showing results
         if (event.key === 'Enter') {
             restartTest()
         }
@@ -97,10 +120,8 @@ const scrollToCurrentLine = () => {
             const containerRect = container.getBoundingClientRect()
             const lineRect = currentLineElement.getBoundingClientRect()
             
-            // Calculate the middle of the container
             const containerMiddle = containerRect.top + containerRect.height / 2
             
-            // Calculate how far to scroll to center the line
             const scrollAmount = lineRect.top - containerMiddle + container.scrollTop
             
             container.scrollTo({
@@ -111,7 +132,10 @@ const scrollToCurrentLine = () => {
     }
 }
 
-// Watch for line changes and scroll
+const navigateToProfile = () => {
+    router.push('/profile')
+}
+
 watch(() => testState.value.currentLineIndex, () => {
     scrollToCurrentLine()
 })
@@ -165,11 +189,29 @@ onMounted(() => {
                             <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd"/>
                         </svg>
                     </button>
+                    <div v-if="isSignedIn" class="flex items-center gap-2">
+                        <button
+                            @click="navigateToProfile"
+                            class="bg-gray-900 hover:bg-yellow-500 text-white px-4 py-2 rounded-full transition-colors duration-500 flex items-center gap-2"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
+                            </svg>
+                            Profile
+                        </button>
+                    </div>
+                    <div v-else class="flex items-center gap-2">
+                        <router-link
+                            to="/sign-in"
+                            class="bg-gray-900 hover:bg-yellow-500 text-white px-4 py-2 rounded-full transition-colors duration-500 flex items-center gap-2"
+                        >
+                            Sign In
+                        </router-link>
+                    </div>
                 </div>
             </header>
 
             <div class="relative">
-                <!-- Code container -->
                 <div class="code-container relative font-mono max-h-[80vh]"
                      :class="{ 'pointer-events-none': showResults }">
                     <div class="absolute top-2 right-2 text-gray-700">
@@ -200,7 +242,6 @@ onMounted(() => {
                     </div>
                 </div>
 
-                <!-- Results overlay -->
                 <div v-if="showResults" class="absolute inset-0 bg-black/80 backdrop-blur-sm 
                     flex flex-col items-center justify-start rounded-lg z-10 overflow-y-hidden">
                     <div class="text-center p-6 rounded-lg border border-gray-500 w-full max-w-4xl mb-2">
@@ -213,6 +254,20 @@ onMounted(() => {
                             </button>
                             <span class="text-gray-400">or press</span>
                             <kbd class="px-2 py-1 bg-gray-700 rounded text-sm text-gray-300 font-mono">Enter ↵</kbd>
+                        </div>
+                        
+                        <div v-if="!isSignedIn" class="mt-4 text-gray-400">
+                            <p>Sign in to save your results and track your progress!</p>
+                            <router-link to="/sign-in" class="text-yellow-500 hover:text-yellow-400 transition-colors mt-2 inline-block">
+                                Sign In / Register
+                            </router-link>
+                        </div>
+                        
+                        <div v-else-if="resultSaved" class="mt-4 text-green-500">
+                            <p>Result saved to your profile!</p>
+                            <button @click="navigateToProfile" class="text-yellow-500 hover:text-yellow-400 transition-colors mt-2">
+                                View your profile
+                            </button>
                         </div>
                     </div>
                     <div class="grid gap-4 w-full max-w-4xl">
@@ -228,7 +283,6 @@ onMounted(() => {
                 </div>
             </div>
         </div>
-        <!-- Footer -->
         <footer class="mt-auto py-4 text-center text-sm text-gray-700">
             <p>
                 Created by
@@ -255,7 +309,6 @@ onMounted(() => {
     scroll-behavior: smooth;
 }
 
-/* Webkit scrollbar styles */
 .code-container::-webkit-scrollbar {
     width: 12px;
     height: 12px;
@@ -276,13 +329,11 @@ onMounted(() => {
     background: #0a0a0a;
 }
 
-/* Firefox scrollbar styles */
 .code-container {
     scrollbar-width: thin;
     scrollbar-color: #000 #000;
 }
 
-/* Hide horizontal scrollbar */
 pre {
     margin: 0;
     padding: 0;
@@ -329,7 +380,7 @@ code {
 }
 
 .char.whitespace {
-    color: rgba(158, 158, 158, 0.4); /* subtle gray for whitespace */
+    color: rgba(158, 158, 158, 0.4);
 }
 
 .char.cursor-before::before {
@@ -418,7 +469,6 @@ code {
     @apply opacity-100;
 }
 
-/* Add a subtle pulse animation when time is low */
 @keyframes pulse {
     0%, 100% {
         opacity: 1;
