@@ -454,20 +454,4 @@ code {
 .group:hover .tooltip {
     @apply opacity-100;
 }
-
-@keyframes pulse {
-
-    0%,
-    100% {
-        opacity: 1;
-    }
-
-    50% {
-        opacity: 0.7;
-    }
-}
-
-.time-display.text-red-500 {
-    animation: pulse 2s ease-in-out infinite;
-}
 </style>
