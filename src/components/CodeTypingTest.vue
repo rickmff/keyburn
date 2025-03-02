@@ -191,10 +191,16 @@ onMounted(() => {
                         </button>
                     </div>
                     <div v-else class="flex items-center gap-2">
-                        <router-link to="/sign-in"
-                            class="bg-gray-900 hover:bg-yellow-500 text-white px-4 py-2 rounded-full transition-colors duration-500 flex items-center gap-2">
-                            Sign In
-                        </router-link>
+                        <div class="relative">
+                            <div class="group relative">
+                              <button class="bg-gray-900 text-white px-4 py-2 rounded-full transition-colors duration-500 flex items-center gap-2 opacity-50 cursor-not-allowed">
+                                  Sign In
+                              </button>
+                              <div class="absolute top-15 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white px-3 py-1 mt-1.5 rounded text-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">
+                                Coming soon
+                              </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </header>
