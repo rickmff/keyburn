@@ -11,6 +11,7 @@ KeyBurn is a typing test application specifically designed for programmers to pr
 - User authentication with Clerk (social logins supported)
 - Profile page to track your progress over time
 - Test results saved to Supabase database
+- SEO optimized for better search engine visibility
 
 ## Setup Instructions
 
@@ -77,6 +78,20 @@ npm run dev
 ```
 
 7. Open your browser and navigate to `http://localhost:5173`
+
+## SEO Configuration
+
+The application includes comprehensive SEO meta tags in the `index.html` file:
+
+- Basic meta tags (title, description, keywords)
+- Open Graph tags for social media sharing
+- Twitter Card tags for Twitter sharing
+- Canonical link
+
+To customize the SEO for your deployment:
+1. Update the URLs in the meta tags to match your domain
+2. Create and add appropriate social media preview images
+3. Adjust meta descriptions and keywords as needed
 
 ## Technologies Used
 
