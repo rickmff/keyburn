@@ -238,8 +238,8 @@ onMounted(() => {
                     </div>
                 </div>
 
-                <div v-if="showResults" class="absolute inset-0 bg-black/80 backdrop-blur-sm 
-                    flex flex-col items-center justify-start rounded-lg z-10 overflow-y-hidden">
+                <div v-if="showResults" class="inset-0 bg-black/80 backdrop-blur-sm 
+                    flex flex-col items-center justify-start rounded-lg z-10 overflow-y-hidden fixed top-0 left-0 right-0 bottom-0 mt-24">
                     <div class="text-center p-6 rounded-lg border border-gray-500 w-full max-w-4xl mb-2">
                         <div class="flex items-center justify-center gap-4">
                             <button @click="restartTest"
@@ -255,7 +255,7 @@ onMounted(() => {
                             <kbd class="px-2 py-1 bg-gray-700 rounded text-sm text-gray-300 font-mono">Enter ↵</kbd>
                         </div>
 
-                        <div v-if="!isSignedIn" class="mt-4 text-gray-400">
+                        <div v-if="false" class="mt-4 text-gray-400">
                             <p>Sign in to save your results and track your progress!</p>
                             <router-link to="/sign-in"
                                 class="text-yellow-500 hover:text-yellow-400 transition-colors mt-2 inline-block">
@@ -280,7 +280,7 @@ onMounted(() => {
                 </div>
             </div>
         </div>
-        <footer class="mt-auto py-4 text-center text-sm text-gray-700">
+        <footer class="mt-auto py-4 text-center text-sm text-gray-700 fixed bottom-0 left-0 right-0 bg-black z-10">
             <p>
                 Created by
                 <a href="https://github.com/rickmff" target="_blank" rel="noopener noreferrer"
