@@ -34,7 +34,7 @@ const getHeatMapColor = (accuracy: number) => {
 </script>
 
 <template>
-  <div class="keyboard-heatmap p-4 py-10 bg-gray-800 rounded-lg border border-gray-500">
+  <div class="keyboard-heatmap p-4 py-10 rounded-lg border border-gray-500">
     <div v-for="(row, rowIndex) in keyboardLayout" :key="rowIndex" class="flex justify-center gap-1 mb-1">
       <div
         v-for="key in row"

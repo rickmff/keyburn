@@ -25,7 +25,6 @@ const errorsPerMinute = computed(() => (props.incorrectChars / (props.totalChara
 
 <template>
   <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-    <!-- Primary Stats -->
     <div class="stats-card transform transition-transform duration-300">
       <h3 class="text-xl font-bold text-yellow-500 mb-4 flex items-center gap-2">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -47,7 +46,6 @@ const errorsPerMinute = computed(() => (props.incorrectChars / (props.totalChara
       </div>
     </div>
 
-    <!-- Accuracy Stats -->
     <div class="stats-card transform transition-transform duration-300">
       <h3 class="text-xl font-bold text-yellow-500 mb-4 flex items-center gap-2">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -69,7 +67,6 @@ const errorsPerMinute = computed(() => (props.incorrectChars / (props.totalChara
       </div>
     </div>
 
-    <!-- Detailed Stats -->
     <div class="stats-card col-span-full transform transition-transform duration-300">
       <h3 class="text-xl font-bold text-yellow-500 mb-4 flex items-center gap-2">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -77,6 +74,7 @@ const errorsPerMinute = computed(() => (props.incorrectChars / (props.totalChara
         </svg>
         Detailed Statistics
       </h3>
+      <div class="grid grid-cols-2 gap-4">
       <div class="grid grid-cols-2 gap-4">
         <div class="stat-item hover:bg-gray-600 transition-colors duration-300">
           <div class="stat-label">Total Keystrokes</div>
@@ -100,10 +98,10 @@ const errorsPerMinute = computed(() => (props.incorrectChars / (props.totalChara
         </div>
       </div>
       
-      <!-- Keyboard Heatmap -->
-      <div class="bg-black rounded-lg border border-gray-500 p-4 mt-4">
+      <div class="bg-black rounded-lg border border-gray-500 p-4">
         <h4 class="text-lg font-semibold mb-3">Keyboard Performance</h4>
         <KeyboardHeatmap :character-stats="characterStats" />
+      </div>
       </div>
     </div>
   </div>
