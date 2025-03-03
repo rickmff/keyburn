@@ -28,7 +28,6 @@ const router = createRouter({
   ]
 })
 
-// Navigation guard for protected routes
 router.beforeEach((to, from, next) => {
   const { isSignedIn } = useAuth()
   
