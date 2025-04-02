@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from "vue"
+import { ref, onMounted, watch, onUnmounted } from "vue"
 import { useCodeTypingTest } from "@/composables/useCodeTypingTest"
 import { getRandomCodeSnippet } from "@/utils/generateCodeSnippets"
 import TestResults from "@/components/TestResults.vue"
@@ -15,14 +15,22 @@ const testDuration = ref(30)
 const showTimeSettings = ref(false)
 const resultSaved = ref(false)
 
-const { testState, lines, wpm, accuracy, startTest, handleInput, endTest, updateDuration } = useCodeTypingTest(testDuration.value)
+const { testState, lines, wpm, accuracy, startTest, handleInput, endTest, updateDuration, pauseTest, resumeTest } = useCodeTypingTest(testDuration.value)
 const { themeClasses } = useTheme()
 
 const showResults = ref(false)
+const testKey = ref(0)
+const input = ref('')
+const showInputModal = ref(true)
+const inputError = ref('')
+
+const isAutoTyping = ref(false)
+const autoTypeInterval = ref<number | null>(null)
 
 const handleTestEnd = async () => {
     endTest()
     showResults.value = true
+    stopAutoType()
 
     if (isSignedIn && user?.value?.id && !resultSaved.value) {
         try {
@@ -55,17 +63,24 @@ const handleTimeChange = (newTime: number) => {
     updateDuration(newTime)
     showTimeSettings.value = false
     if (!testState.value.startTime) {
-        restartTest()
+        restartTest(false)
     }
 }
 
-const restartTest = () => {
+const restartTest = async (generateNew = false) => {
     showResults.value = false
     resultSaved.value = false
-    startTest(getRandomCodeSnippet())
-}
 
-const isInputDisabled = computed(() => showResults.value)
+    if (generateNew) {
+        const snippet = await getRandomCodeSnippet(input.value)
+        console.log('New snippet received in restart:', snippet)
+        startTest(snippet)
+    } else {
+        // Restart with the current snippet
+        startTest(testState.value.currentSnippet!)
+    }
+    testKey.value++
+}
 
 const getLineClass = (index: number) => {
     if (index === testState.value.currentLineIndex) return 'current-line'
@@ -99,9 +114,13 @@ const getCharClass = (lineIndex: number, charIndex: number) => {
 }
 
 const handleKeyPress = (event: KeyboardEvent) => {
+    if (showInputModal.value) {
+        return
+    }
+
     if (showResults.value || testState.value.timeLeft === 0) {
         if (event.key === 'Enter') {
-            restartTest()
+            restartTest(false)
         }
         event.preventDefault()
         return
@@ -138,16 +157,69 @@ watch(() => testState.value.currentLineIndex, () => {
     scrollToCurrentLine()
 })
 
-onMounted(() => {
-    startTest(getRandomCodeSnippet())
+const handleInputModalToggle = (show: boolean) => {
+    showInputModal.value = show
+    if (show && testState.value.isTestActive) {
+        pauseTest()
+    } else if (!show && testState.value.isTestActive) {
+        resumeTest()
+    }
+}
+
+const handleInputSubmit = () => {
+    if (!input.value || input.value.trim().length === 0) {
+        inputError.value = 'Input is required'
+        return
+    }
+    if (input.value.length > 90) {
+        inputError.value = 'Input must be less than 90 characters'
+        return
+    }
+    handleInputModalToggle(false)
+    inputError.value = ''
+    restartTest(true)
+}
+
+const startAutoType = () => {
+    if (autoTypeInterval.value) return
+    isAutoTyping.value = true
+    autoTypeInterval.value = window.setInterval(() => {
+        if (!testState.value.currentSnippet) return
+        const currentLine = lines.value[testState.value.currentLineIndex] || ''
+        const currentInput = testState.value.input[testState.value.currentLineIndex] || ''
+
+        if (currentInput.length >= currentLine.length) {
+            handleInput('Enter')
+        } else {
+            const nextChar = currentLine[currentInput.length]
+            handleInput(nextChar)
+        }
+    }, 100) // Type a character every 50ms
+}
+
+const stopAutoType = () => {
+    isAutoTyping.value = false
+    if (autoTypeInterval.value) {
+        clearInterval(autoTypeInterval.value)
+        autoTypeInterval.value = null
+    }
+}
+
+onMounted(async () => {
+    const snippet = await getRandomCodeSnippet(input.value)
+    startTest(snippet)
     document.querySelector('main')?.focus()
+})
+
+onUnmounted(() => {
+    stopAutoType()
 })
 </script>
 
 <template>
     <main :class="['min-h-screen py-14 flex flex-col', themeClasses]" @keydown="handleKeyPress" tabindex="0">
         <div class="container mx-auto max-w-9xl flex-grow">
-            <header v-if="!showResults" class="flex justify-between items-center lg:px-48 px-16 fixed top-0 left-0 right-0 bg-black h-24 z-10">
+            <header v-if="!showResults" class="flex justify-between items-center sticky top-0 left-0 right-0 bg-black h-20 z-10 mx-auto max-w-9xl">
                 <div class="flex items-center">
                     <h1 class="text-4xl font-bold text-yellow-500">
                         <span class="text-gray-700">${</span> KeyBurn <span class="text-gray-700">}</span>
@@ -170,7 +242,13 @@ onMounted(() => {
                     <p class="text-xl" :class="{ 'opacity-50': !testState.startTime }">
                         {{ wpm }} <span class="text-gray-700">WPM</span>
                     </p>
-                    <button @click="restartTest"
+                    <button @click="handleInputModalToggle(true)"
+                        class="bg-gray-900 hover:bg-yellow-500 text-white p-2 rounded-full transition-colors duration-500">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
+                        </svg>
+                    </button>
+                    <button @click="restartTest(false)"
                         class="bg-gray-900 hover:bg-yellow-500 text-white px-4 py-2 rounded-full transition-colors duration-500 flex items-center gap-2"
                         :disabled="showResults">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -178,6 +256,23 @@ onMounted(() => {
                                 d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"
                                 clip-rule="evenodd" />
                         </svg>
+                    </button>
+                    <button
+                        @mousedown="startAutoType"
+                        @mouseup="stopAutoType"
+                        @mouseleave="stopAutoType"
+                        @touchstart="startAutoType"
+                        @touchend="stopAutoType"
+                        class="bg-gray-900 hover:bg-yellow-500 text-white px-4 py-2 rounded-full transition-colors duration-500 flex items-center gap-2 relative group"
+                        :disabled="showResults || showInputModal"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
+                            <path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd" />
+                        </svg>
+                        <span class="absolute -bottom-8 left-1/2 transform -translate-x-1/2 px-2 py-1 text-xs text-gray-300 bg-gray-800 rounded-md opacity-0 transition-opacity duration-200 whitespace-nowrap group-hover:opacity-100">
+                            Hold to auto-type
+                        </span>
                     </button>
                     <div v-if="isSignedIn" class="flex items-center gap-2">
                         <button @click="navigateToProfile"
@@ -199,8 +294,47 @@ onMounted(() => {
                 </div>
             </header>
 
+            <div v-if="showInputModal" class="fixed inset-0 modal-backdrop flex items-center justify-center z-50 transition-all duration-300">
+                <div class="glassmorphic p-8 rounded-2xl w-full max-w-md mx-4 transform transition-all duration-300" @keydown.stop>
+                    <div class="flex items-center justify-between mb-6">
+                        <h2 class="text-2xl font-bold bg-gradient-to-r from-yellow-500 to-yellow-300 bg-clip-text text-transparent">Custom Code</h2>
+                        <div class="h-1 w-12 bg-gradient-to-r from-yellow-500 to-yellow-300 rounded-full"></div>
+                    </div>
+                    <div class="space-y-6">
+                        <div>
+                            <label for="codeInput" class="block text-sm font-medium text-gray-300 mb-2 tracking-wide">
+                                Generate your code snippet
+                            </label>
+                            <div class="relative">
+                                <textarea
+                                    id="codeInput"
+                                    v-model="input"
+                                    rows="3"
+                                    maxlength="90"
+                                    @keydown.enter.prevent="handleInputSubmit"
+                                    class="w-full bg-black/40 border border-gray-700/50 rounded-xl p-4 text-white focus:ring-2 focus:ring-yellow-500/50 focus:border-transparent transition-all duration-300 placeholder-gray-500"
+                                    placeholder="Enter your code prompt here..."
+                                ></textarea>
+                                <div class="absolute right-3 bottom-3 text-sm text-gray-500 bg-black/40 px-2 py-1 rounded-md">
+                                    {{ input.length }}/90
+                                </div>
+                            </div>
+                            <p v-if="inputError" class="text-sm text-red-500 mt-2 min-h-[20px]">{{ inputError }}</p>
+                        </div>
+                        <div class="flex justify-end">
+                            <button
+                                @click="handleInputSubmit"
+                                class="bg-gradient-to-r from-yellow-500 to-yellow-400 hover:from-yellow-400 hover:to-yellow-300 text-black font-semibold px-6 py-3 rounded-xl transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-yellow-500/50 shadow-lg"
+                            >
+                                Generate Code
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="relative">
-                <div class="code-container relative font-mono"
+                <div class="code-container relative font-mono" :key="testKey"
                     :class="{ 'pointer-events-none': showResults }">
                     <div class="absolute top-2 right-2 text-gray-700">
                         {{ testState.currentSnippet?.title || '' }}
@@ -232,11 +366,11 @@ onMounted(() => {
                     </div>
                 </div>
 
-                <div v-if="showResults" class="inset-0 bg-black/80 backdrop-blur-sm 
-                    flex flex-col items-center justify-start rounded-lg z-10 overflow-y-hidden fixed top-0 left-0 right-0 bottom-0 mt-24">
+                <div v-if="showResults" class="inset-0 bg-black/80 backdrop-blur-sm
+                    flex flex-col items-center justify-start rounded-lg z-10 absolute top-0 left-0 right-0 bottom-0 mt-24">
                     <div class="text-center p-6 rounded-lg border border-gray-500 w-full max-w-4xl mb-2">
                         <div class="flex items-center justify-center gap-4">
-                            <button @click="restartTest"
+                            <button @click="restartTest(false)"
                                 class="bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-2 px-6 rounded-full transition-all duration-300 flex items-center gap-2">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20"
                                     fill="currentColor">
@@ -280,6 +414,12 @@ onMounted(() => {
                 <a href="https://github.com/rickmff" target="_blank" rel="noopener noreferrer"
                     class="text-yellow-500 hover:text-yellow-400 transition-colors duration-300">
                     Rickmff
+                </a>
+                <span class="text-gray-700 mx-6">|</span>
+                Powered by
+                <a href="https://itz.am" target="_blank" rel="noopener noreferrer"
+                    class="text-orange-500 hover:text-orange-400 transition-colors duration-300">
+                    Itzam
                 </a>
             </p>
         </footer>
@@ -356,7 +496,7 @@ code {
     flex-wrap: nowrap;
     overflow-x: visible;
     white-space: pre;
-    letter-spacing: 0.15em;
+    letter-spacing: 0.05em;
 }
 
 .char {
@@ -415,7 +555,6 @@ code {
 }
 
 @keyframes blink {
-
     0%,
     100% {
         opacity: 1;
@@ -453,5 +592,28 @@ code {
 
 .group:hover .tooltip {
     @apply opacity-100;
+}
+
+.glassmorphic {
+    background: rgba(17, 17, 17, 0.7);
+    backdrop-filter: blur(12px) saturate(180%);
+    -webkit-backdrop-filter: blur(12px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+
+.modal-backdrop {
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(8px) saturate(180%);
+    -webkit-backdrop-filter: blur(8px) saturate(180%);
+}
+
+.group:hover .tooltip {
+    opacity: 1;
+}
+
+.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 </style>

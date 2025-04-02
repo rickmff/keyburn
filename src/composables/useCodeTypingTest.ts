@@ -40,11 +40,11 @@ export function useCodeTypingTest(initialDuration: number) {
     mistakes: {}
   })
 
-  const lines = computed(() => 
+  const lines = computed(() =>
     testState.value.currentSnippet?.code.split('\n') || []
   )
 
-  const currentLine = computed(() => 
+  const currentLine = computed(() =>
     lines.value[testState.value.currentLineIndex] || ''
   )
 
@@ -105,7 +105,7 @@ export function useCodeTypingTest(initialDuration: number) {
     resetInactivityTimer()
 
     const currentLine = lines.value[testState.value.currentLineIndex]
-    
+
     if (char === 'Enter') {
       moveToNextLine()
       return
@@ -146,7 +146,7 @@ export function useCodeTypingTest(initialDuration: number) {
     if (currentInput && currentInput.length > 0) {
       const lastChar = currentInput[currentInput.length - 1]
       const expectedChar = lines.value[testState.value.currentLineIndex][currentInput.length - 1]
-      
+
       if (expectedChar !== ' ' && expectedChar !== '\t' && expectedChar !== '\n') {
         if (lastChar === expectedChar) {
           testState.value.correctChars = Math.max(0, testState.value.correctChars - 1)
@@ -223,6 +223,28 @@ export function useCodeTypingTest(initialDuration: number) {
     }
   }
 
+  function pauseTest(): void {
+    if (testState.value.isTestActive) {
+      testState.value.isTestActive = false
+      if (gameTimer) {
+        clearInterval(gameTimer)
+        gameTimer = null
+      }
+      if (lastActiveTime) {
+        const now = Date.now()
+        testState.value.actualTypingTime += now - lastActiveTime
+        lastActiveTime = null
+      }
+    }
+  }
+
+  function resumeTest(): void {
+    if (!testState.value.endTime) {
+      testState.value.isTestActive = true
+      startGameTimer()
+    }
+  }
+
   return {
     testState,
     lines,
@@ -232,6 +254,8 @@ export function useCodeTypingTest(initialDuration: number) {
     startTest,
     handleInput,
     endTest,
-    updateDuration
+    updateDuration,
+    pauseTest,
+    resumeTest
   }
-} 
+}
